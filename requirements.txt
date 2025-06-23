@@ -1,0 +1,29 @@
+# Patient Management System Dependencies
+# Compatible with Python 3.8+
+
+# Core Web Framework
+fastapi==0.104.1                # Modern, fast web framework for building APIs
+uvicorn[standard]==0.24.0        # Lightning-fast ASGI server implementation
+
+# Database and ORM
+sqlalchemy==2.0.23              # SQL toolkit and Object-Relational Mapping (ORM)
+
+# Data Validation and Serialization  
+pydantic==2.5.0                 # Data validation using Python type annotations
+
+# Form Handling
+python-multipart==0.0.6         # Multipart form data parsing
+
+# Additional helpful packages (optional but recommended)
+# Uncomment these if you want to add them:
+
+# python-jose[cryptography]==3.3.0  # For JWT tokens (future authentication)
+# passlib[bcrypt]==1.7.4            # For password hashing (future authentication)
+# python-dotenv==1.0.0              # For environment variables
+# pytest==7.4.3                     # For unit testing
+# httpx==0.25.0                     # For testing API endpoints
+
+# Development Dependencies (install with: pip install -r requirements-dev.txt)
+# black==23.11.0                    # Code formatting
+# flake8==6.1.0                     # Code linting
+# mypy==1.7.1                       # Type checking

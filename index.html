@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectrum Mental Health - Patient Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            font-weight: 600;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn.active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .section {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .required {
+            color: #e74c3c;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            margin: 0 5px;
+        }
+
+        .patients-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .patient-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border-left: 4px solid #667eea;
+        }
+
+        .patient-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .patient-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .patient-number {
+            font-size: 14px;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .patient-details {
+            color: #666;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .patient-details strong {
+            color: #333;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 50px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            background: white;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .hipaa-notice {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80%;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e1e5e9;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            margin: 0;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #667eea;
+        }
+
+        .patient-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .patient-info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .patient-info-item label {
+            font-weight: 700;
+            color: #555;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .patient-info-item p {
+            margin: 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .patient-info-full {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 768px) {
+            .form-row-2, .form-row-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .patients-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .patient-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Spectrum Mental Health</h1>
+            <p>Patient Management System - Miami, FL</p>
+        </div>
+
+        <div class="nav">
+            <button class="nav-btn active" onclick="showSection('add-patient')">Add Patient</button>
+            <button class="nav-btn" onclick="showSection('patient-log')">Patient Log</button>
+        </div>
+
+        <!-- Add Patient Section -->
+        <div id="add-patient" class="section active">
+            <h2>Add New Patient</h2>
+            <div class="hipaa-notice">
+                <strong>HIPAA Notice:</strong> All patient information is confidential and protected under HIPAA regulations. Access is restricted to authorized personnel only.
+            </div>
+            <div id="add-alert"></div>
+            
+            <form id="patientForm">
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="patientNumber">Patient Number <span class="required">*</span></label>
+                        <input type="text" id="patientNumber" name="patient_number" required placeholder="e.g., PT001A">
+                    </div>
+                    <div class="form-group">
+                        <label for="session">Session <span class="required">*</span></label>
+                        <select id="session" name="session" required>
+                            <option value="">Select Session</option>
+                            <option value="AM">AM Session</option>
+                            <option value="PM">PM Session</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="firstName">First Name <span class="required">*</span></label>
+                        <input type="text" id="firstName" name="first_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name <span class="required">*</span></label>
+                        <input type="text" id="lastName" name="last_name" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="address">Address</label>
+                    <input type="text" id="address" name="address" placeholder="Full address including city, state, zip">
+                </div>
+
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label for="dateOfBirth">Date of Birth</label>
+                        <input type="date" id="dateOfBirth" name="date_of_birth">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" placeholder="(305) 555-0123">
+                    </div>
+                    <div class="form-group">
+                        <label for="ssn">SSN</label>
+                        <input type="text" id="ssn" name="ssn" placeholder="XXX-XX-XXXX" maxlength="11">
+                    </div>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="medicaidId">Medicaid ID</label>
+                        <input type="text" id="medicaidId" name="medicaid_id">
+                    </div>
+                    <div class="form-group">
+                        <label for="insurance">Insurance</label>
+                        <select id="insurance" name="insurance">
+                            <option value="">Select Insurance</option>
+                            <option value="Medicaid">Medicaid</option>
+                            <option value="Medicare">Medicare</option>
+                            <option value="Aetna">Aetna</option>
+                            <option value="Blue Cross Blue Shield">Blue Cross Blue Shield</option>
+                            <option value="Humana">Humana</option>
+                            <option value="UnitedHealthcare">UnitedHealthcare</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="insuranceId">Insurance ID</label>
+                        <input type="text" id="insuranceId" name="insurance_id">
+                    </div>
+                    <div class="form-group">
+                        <label for="referal">Referal</label>
+                        <input type="text" id="referal" name="referal" placeholder="Who referred this patient?">
+                    </div>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="psrDate">PSR Date</label>
+                        <input type="date" id="psrDate" name="psr_date">
+                    </div>
+                    <div class="form-group">
+                        <label for="authorization">Authorization</label>
+                        <input type="text" id="authorization" name="authorization" placeholder="Authorization details">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="diagnosis">Diagnosis</label>
+                    <input type="text" id="diagnosis" name="diagnosis" placeholder="Diagnosis codes and description">
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="startDate">Start Date</label>
+                        <input type="date" id="startDate" name="start_date">
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End Date</label>
+                        <input type="date" id="endDate" name="end_date">
+                    </div>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="code1">Code 1</label>
+                        <input type="text" id="code1" name="code1" placeholder="e.g., A3329(1)">
+                    </div>
+                    <div class="form-group">
+                        <label for="code2">Code 2</label>
+                        <input type="text" id="code2" name="code2" placeholder="e.g., B1234(2)">
+                    </div>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="code3">Code 3</label>
+                        <input type="text" id="code3" name="code3" placeholder="e.g., C5678(3)">
+                    </div>
+                    <div class="form-group">
+                        <label for="code4">Code 4</label>
+                        <input type="text" id="code4" name="code4" placeholder="e.g., D9876(4)">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">Add Patient</button>
+            </form>
+        </div>
+
+        <!-- Patient Log Section -->
+        <div id="patient-log" class="section">
+            <div id="patient-list-view">
+                <h2>Patient Log</h2>
+                <input type="text" class="search-box" id="searchBox" placeholder="Search by patient number, name, or phone...">
+                
+                <div id="loading" class="loading" style="display: none;">
+                    Loading patients...
+                </div>
+                
+                <div id="patientsContainer" class="patients-grid">
+                    <!-- Patient cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Edit Patient Form (Hidden by default) -->
+            <div id="patient-edit-view" style="display: none;">
+                <h2>Edit Patient Information</h2>
+                <div class="hipaa-notice">
+                    <strong>Notice:</strong> You are editing patient information. All changes will be logged and tracked.
+                </div>
+                <div id="edit-alert"></div>
+                
+                <form id="editPatientForm">
+                    <input type="hidden" id="editPatientId" name="patient_id">
+                    
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="editPatientNumber">Patient Number <span class="required">*</span></label>
+                            <input type="text" id="editPatientNumber" name="patient_number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editSession">Session <span class="required">*</span></label>
+                            <select id="editSession" name="session" required>
+                                <option value="">Select Session</option>
+                                <option value="AM">AM Session</option>
+                                <option value="PM">PM Session</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="editFirstName">First Name <span class="required">*</span></label>
+                            <input type="text" id="editFirstName" name="first_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editLastName">Last Name <span class="required">*</span></label>
+                            <input type="text" id="editLastName" name="last_name" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editAddress">Address</label>
+                        <input type="text" id="editAddress" name="address">
+                    </div>
+
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label for="editDateOfBirth">Date of Birth</label>
+                            <input type="date" id="editDateOfBirth" name="date_of_birth">
+                        </div>
+                        <div class="form-group">
+                            <label for="editPhone">Phone Number</label>
+                            <input type="tel" id="editPhone" name="phone">
+                        </div>
+                        <div class="form-group">
+                            <label for="editSsn">SSN</label>
+                            <input type="text" id="editSsn" name="ssn">
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="editMedicaidId">Medicaid ID</label>
+                            <input type="text" id="editMedicaidId" name="medicaid_id">
+                        </div>
+                        <div class="form-group">
+                            <label for="editInsurance">Insurance</label>
+                            <select id="editInsurance" name="insurance">
+                                <option value="">Select Insurance</option>
+                                <option value="Medicaid">Medicaid</option>
+                                <option value="Medicare">Medicare</option>
+                                <option value="Aetna">Aetna</option>
+                                <option value="Blue Cross Blue Shield">Blue Cross Blue Shield</option>
+                                <option value="Humana">Humana</option>
+                                <option value="UnitedHealthcare">UnitedHealthcare</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="editInsuranceId">Insurance ID</label>
+                            <input type="text" id="editInsuranceId" name="insurance_id">
+                        </div>
+                        <div class="form-group">
+                            <label for="editReferal">Referal</label>
+                            <input type="text" id="editReferal" name="referal">
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="editPsrDate">PSR Date</label>
+                            <input type="date" id="editPsrDate" name="psr_date">
+                        </div>
+                        <div class="form-group">
+                            <label for="editAuthorization">Authorization</label>
+                            <input type="text" id="editAuthorization" name="authorization">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editDiagnosis">Diagnosis</label>
+                        <input type="text" id="editDiagnosis" name="diagnosis">
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="editStartDate">Start Date</label>
+                            <input type="date" id="editStartDate" name="start_date">
+                        </div>
+                        <div class="form-group">
+                            <label for="editEndDate">End Date</label>
+                            <input type="date" id="editEndDate" name="end_date">
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="editCode1">Code 1</label>
+                            <input type="text" id="editCode1" name="code1">
+                        </div>
+                        <div class="form-group">
+                            <label for="editCode2">Code 2</label>
+                            <input type="text" id="editCode2" name="code2">
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="editCode3">Code 3</label>
+                            <input type="text" id="editCode3" name="code3">
+                        </div>
+                        <div class="form-group">
+                            <label for="editCode4">Code 4</label>
+                            <input type="text" id="editCode4" name="code4">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <button type="submit" class="btn">Update Patient</button>
+                        <button type="button" class="btn btn-danger" onclick="cancelEdit()" style="margin-left: 15px;">Back to Patient List</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient View Modal -->
+    <div id="patientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Patient Information</h2>
+                <span class="close" onclick="closePatientModal()">&times;</span>
+            </div>
+            <div id="modalPatientInfo">
+                <!-- Patient info will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let allPatients = [];
+
+        // Navigation
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Load data if needed
+            if (sectionId === 'patient-log') {
+                loadPatients();
+            }
+        }
+
+        // Add Patient Form
+        document.getElementById('patientForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const patientData = {};
+            
+            for (let [key, value] of formData.entries()) {
+                if (value.trim() !== '') {
+                    patientData[key] = value;
+                }
+            }
+            
+            console.log('Form data being sent:', patientData);
+            
+            try {
+                const response = await fetch(`${API_BASE}/patients/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(patientData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Response from server:', result);
+                    showAlert('add-alert', 'Patient added successfully!', 'success');
+                    this.reset();
+                } else {
+                    const error = await response.json();
+                    showAlert('add-alert', `Error: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                showAlert('add-alert', 'Error connecting to server. Make sure your FastAPI server is running.', 'error');
+            }
+        });
+
+        // Load Patients
+        async function loadPatients() {
+            document.getElementById('loading').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${API_BASE}/patients/`);
+                if (response.ok) {
+                    allPatients = await response.json();
+                    displayPatients(allPatients);
+                } else {
+                    document.getElementById('patientsContainer').innerHTML = '<p>Error loading patients</p>';
+                }
+            } catch (error) {
+                document.getElementById('patientsContainer').innerHTML = '<p>Error connecting to server</p>';
+            }
+            
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Display Patients - ONLY show ID, Name, Phone as requested
+        function displayPatients(patients) {
+            const container = document.getElementById('patientsContainer');
+            
+            if (patients.length === 0) {
+                container.innerHTML = '<p>No patients found</p>';
+                return;
+            }
+            
+            container.innerHTML = patients.map(patient => `
+                <div class="patient-card">
+                    <div class="patient-number">Patient #${patient.patient_number}</div>
+                    <div class="patient-name">${patient.first_name} ${patient.last_name}</div>
+                    <div class="patient-details">
+                        ${patient.phone ? `<strong>Phone:</strong> ${patient.phone}<br />` : '<strong>Phone:</strong> Not provided<br />'}
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-small" onclick="viewPatient(${patient.id})" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">View</button>
+                        <button class="btn btn-small" onclick="editPatient(${patient.id})" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="deletePatient(${patient.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Search Patients
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            const filteredPatients = allPatients.filter(patient => 
+                patient.patient_number.toLowerCase().includes(query) ||
+                patient.first_name.toLowerCase().includes(query) ||
+                patient.last_name.toLowerCase().includes(query) ||
+                (patient.phone && patient.phone.toLowerCase().includes(query))
+            );
+            displayPatients(filteredPatients);
+        });
+
+        // View Patient Function
+        async function viewPatient(patientId) {
+            console.log('Viewing patient ID:', patientId);
+            
+            try {
+                const response = await fetch(`${API_BASE}/patients/${patientId}`);
+                console.log('API Response status:', response.status);
+                
+                if (response.ok) {
+                    const patient = await response.json();
+                    console.log('Patient data loaded:', patient);
+                    
+                    // Format the patient information for display
+                    const modalContent = `
+                        <div class="patient-info-grid">
+                            <div class="patient-info-item">
+                                <label>Patient Number:</label>
+                                <p>${patient.patient_number || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Session:</label>
+                                <p>${patient.session || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>First Name:</label>
+                                <p>${patient.first_name || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Last Name:</label>
+                                <p>${patient.last_name || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item patient-info-full">
+                                <label>Address:</label>
+                                <p>${patient.address || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Date of Birth:</label>
+                                <p>${patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Phone:</label>
+                                <p>${patient.phone || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Social Security Number:</label>
+                                <p>${patient.ssn || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Medicaid ID:</label>
+                                <p>${patient.medicaid_id || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Insurance:</label>
+                                <p>${patient.insurance || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Insurance ID:</label>
+                                <p>${patient.insurance_id || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Referal:</label>
+                                <p>${patient.referal || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>PSR Date:</label>
+                                <p>${patient.psr_date ? new Date(patient.psr_date).toLocaleDateString() : 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item patient-info-full">
+                                <label>Authorization:</label>
+                                <p>${patient.authorization || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item patient-info-full">
+                                <label>Diagnosis:</label>
+                                <p>${patient.diagnosis || 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Start Date:</label>
+                                <p>${patient.start_date ? new Date(patient.start_date).toLocaleDateString() : 'Not provided'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>End Date:</label>
+                                <p>${patient.end_date ? new Date(patient.end_date).toLocaleDateString() : 'Ongoing'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Code 1:</label>
+                                <p>${patient.code1 || 'Not assigned'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Code 2:</label>
+                                <p>${patient.code2 || 'Not assigned'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Code 3:</label>
+                                <p>${patient.code3 || 'Not assigned'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Code 4:</label>
+                                <p>${patient.code4 || 'Not assigned'}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Record Created:</label>
+                                <p>${new Date(patient.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div class="patient-info-item">
+                                <label>Last Updated:</label>
+                                <p>${new Date(patient.updated_at).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Display the modal
+                    document.getElementById('modalPatientInfo').innerHTML = modalContent;
+                    document.getElementById('patientModal').style.display = 'block';
+                    
+                } else {
+                    console.error('Error loading patient:', response.status, response.statusText);
+                    alert('Error loading patient data');
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+                alert('Error connecting to server');
+            }
+        }
+
+        // Close Patient Modal
+        function closePatientModal() {
+            document.getElementById('patientModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('patientModal');
+            if (event.target === modal) {
+                closePatientModal();
+            }
+        }
+
+        // Delete Patient
+        async function deletePatient(id) {
+            if (confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
+                try {
+                    const response = await fetch(`${API_BASE}/patients/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        loadPatients(); // Reload the list
+                    } else {
+                        alert('Error deleting patient');
+                    }
+                } catch (error) {
+                    alert('Error connecting to server');
+                }
+            }
+        }
+
+        // Edit Patient Function
+        async function editPatient(patientId) {
+            console.log('Editing patient ID:', patientId);
+            
+            try {
+                const response = await fetch(`${API_BASE}/patients/${patientId}`);
+                console.log('API Response status:', response.status);
+                
+                if (response.ok) {
+                    const patient = await response.json();
+                    console.log('Patient data loaded:', patient);
+                    
+                    // Fill the edit form with patient data
+                    document.getElementById('editPatientId').value = patient.id;
+                    document.getElementById('editPatientNumber').value = patient.patient_number || '';
+                    document.getElementById('editFirstName').value = patient.first_name || '';
+                    document.getElementById('editLastName').value = patient.last_name || '';
+                    document.getElementById('editAddress').value = patient.address || '';
+                    document.getElementById('editDateOfBirth').value = patient.date_of_birth || '';
+                    document.getElementById('editPhone').value = patient.phone || '';
+                    document.getElementById('editSsn').value = patient.ssn || '';
+                    document.getElementById('editMedicaidId').value = patient.medicaid_id || '';
+                    document.getElementById('editInsurance').value = patient.insurance || '';
+                    document.getElementById('editInsuranceId').value = patient.insurance_id || '';
+                    document.getElementById('editSession').value = patient.session || '';
+                    document.getElementById('editReferal').value = patient.referal || '';
+                    document.getElementById('editPsrDate').value = patient.psr_date || '';
+                    document.getElementById('editAuthorization').value = patient.authorization || '';
+                    document.getElementById('editDiagnosis').value = patient.diagnosis || '';
+                    document.getElementById('editStartDate').value = patient.start_date || '';
+                    document.getElementById('editEndDate').value = patient.end_date || '';
+                    document.getElementById('editCode1').value = patient.code1 || '';
+                    document.getElementById('editCode2').value = patient.code2 || '';
+                    document.getElementById('editCode3').value = patient.code3 || '';
+                    document.getElementById('editCode4').value = patient.code4 || '';
+                    
+                    // Hide patient list and show edit form
+                    document.getElementById('patient-list-view').style.display = 'none';
+                    document.getElementById('patient-edit-view').style.display = 'block';
+                } else {
+                    console.error('Error loading patient:', response.status, response.statusText);
+                    alert('Error loading patient data');
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+                alert('Error connecting to server');
+            }
+        }
+
+        // Cancel Edit Function
+        function cancelEdit() {
+            document.getElementById('patient-edit-view').style.display = 'none';
+            document.getElementById('patient-list-view').style.display = 'block';
+            document.getElementById('edit-alert').innerHTML = '';
+        }
+
+        // Show Alert
+        function showAlert(containerId, message, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            
+            // Clear alert after 5 seconds
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // Load patients on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPatients();
+            
+            // Add Edit Patient Form Handler
+            document.getElementById('editPatientForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const patientId = document.getElementById('editPatientId').value;
+                const formData = new FormData(this);
+                const patientData = {};
+                
+                for (let [key, value] of formData.entries()) {
+                    if (key !== 'patient_id' && value.trim() !== '') {
+                        patientData[key] = value;
+                    }
+                }
+                
+                console.log('Updating patient:', patientId, patientData);
+                
+                try {
+                    const response = await fetch(`${API_BASE}/patients/${patientId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(patientData)
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        showAlert('edit-alert', 'Patient updated successfully!', 'success');
+                        loadPatients(); // Refresh the patient list
+                        setTimeout(() => {
+                            cancelEdit();
+                        }, 1500);
+                    } else {
+                        const error = await response.json();
+                        showAlert('edit-alert', `Error: ${error.detail}`, 'error');
+                    }
+                } catch (error) {
+                    showAlert('edit-alert', 'Error connecting to server.', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
