@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Debug - Spectrum Mental Health</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 20px;
+        }
+
+        .debug-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .debug-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+
+        .debug-section h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .log-area {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .test-form {
+            display: grid;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .test-form input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .cookies-info {
+            font-family: monospace;
+            font-size: 12px;
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🔍 Login Authentication Debug Tool</h1>
+        
+        <!-- Server Connection Test -->
+        <div class="debug-section">
+            <h3>1. Server Connection Test</h3>
+            <div id="server-status">Testing...</div>
+            <div id="server-log" class="log-area"></div>
+            <button class="btn" onclick="testServerConnection()">Retest Connection</button>
+        </div>
+
+        <!-- Authentication Test -->
+        <div class="debug-section">
+            <h3>2. Authentication Test</h3>
+            <div id="auth-status">Not tested</div>
+            <div class="test-form">
+                <input type="text" id="test-username" placeholder="Username" value="admin">
+                <input type="password" id="test-password" placeholder="Password" value="SpectrumAdmin2024!">
+                <button class="btn" onclick="testLogin()">Test Login</button>
+                <button class="btn" onclick="testCurrentUser()">Check Current User</button>
+                <button class="btn" onclick="clearSession()">Clear Session</button>
+            </div>
+            <div id="auth-log" class="log-area"></div>
+        </div>
+
+        <!-- Cookie Analysis -->
+        <div class="debug-section">
+            <h3>3. Cookie & Session Analysis</h3>
+            <div id="cookie-status">Analyzing...</div>
+            <div id="cookie-info" class="cookies-info"></div>
+            <button class="btn" onclick="analyzeCookies()">Refresh Cookie Analysis</button>
+        </div>
+
+        <!-- Network Debug -->
+        <div class="debug-section">
+            <h3>4. Network Debug</h3>
+            <div id="network-status">Ready</div>
+            <button class="btn" onclick="testCORS()">Test CORS</button>
+            <button class="btn" onclick="testCredentials()">Test Credentials</button>
+            <div id="network-log" class="log-area"></div>
+        </div>
+
+        <!-- Quick Fix Actions -->
+        <div class="debug-section">
+            <h3>5. Quick Fix Actions</h3>
+            <button class="btn" onclick="window.location.href='login.html'">Go to Login Page</button>
+            <button class="btn" onclick="window.location.href='index.html'">Go to Main App</button>
+            <button class="btn" onclick="clearAllData()">Clear All Browser Data</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASES = [
+            'http://localhost:8000',
+            'http://127.0.0.1:8000',
+            'http://0.0.0.0:8000'
+        ];
+        let workingAPI = null;
+
+        // Logging functions
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#51cf66' : '#00ff00';
+            element.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function setStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.className = `status ${type}`;
+            element.textContent = message;
+        }
+
+        // Test server connection
+        async function testServerConnection() {
+            log('server-log', 'Testing server connections...', 'info');
+            setStatus('server-status', 'Testing...', 'warning');
+            
+            for (const base of API_BASES) {
+                try {
+                    log('server-log', `Trying ${base}...`, 'info');
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    const response = await fetch(`${base}/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        log('server-log', `✅ SUCCESS: ${base} - ${JSON.stringify(data)}`, 'success');
+                        workingAPI = base;
+                        setStatus('server-status', `Connected to ${base}`, 'success');
+                        return base;
+                    } else {
+                        log('server-log', `❌ FAILED: ${base} - Status: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    log('server-log', `❌ ERROR: ${base} - ${error.message}`, 'error');
+                }
+            }
+            
+            setStatus('server-status', 'No server connection available', 'error');
+            log('server-log', '❌ All connection attempts failed', 'error');
+            return null;
+        }
+
+        // Test login
+        async function testLogin() {
+            if (!workingAPI) {
+                log('auth-log', '❌ No working API connection. Test server first.', 'error');
+                return;
+            }
+
+            const username = document.getElementById('test-username').value;
+            const password = document.getElementById('test-password').value;
+
+            log('auth-log', `Attempting login with ${username}...`, 'info');
+            setStatus('auth-status', 'Testing login...', 'warning');
+
+            try {
+                const response = await fetch(`${workingAPI}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+                const result = await response.json();
+                
+                log('auth-log', `Response status: ${response.status}`, 'info');
+                log('auth-log', `Response data: ${JSON.stringify(result, null, 2)}`, 'info');
+
+                if (result.success) {
+                    setStatus('auth-status', 'Login successful!', 'success');
+                    log('auth-log', '✅ Login successful!', 'success');
+                    analyzeCookies();
+                } else {
+                    setStatus('auth-status', `Login failed: ${result.message}`, 'error');
+                    log('auth-log', `❌ Login failed: ${result.message}`, 'error');
+                }
+
+            } catch (error) {
+                log('auth-log', `❌ Login error: ${error.message}`, 'error');
+                setStatus('auth-status', 'Login error', 'error');
+            }
+        }
+
+        // Test current user
+        async function testCurrentUser() {
+            if (!workingAPI) {
+                log('auth-log', '❌ No working API connection. Test server first.', 'error');
+                return;
+            }
+
+            log('auth-log', 'Checking current user...', 'info');
+
+            try {
+                const response = await fetch(`${workingAPI}/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                log('auth-log', `Current user check status: ${response.status}`, 'info');
+
+                if (response.ok) {
+                    const user = await response.json();
+                    log('auth-log', `✅ Current user: ${JSON.stringify(user, null, 2)}`, 'success');
+                    setStatus('auth-status', `Logged in as: ${user.username}`, 'success');
+                } else {
+                    const error = await response.json();
+                    log('auth-log', `❌ Not authenticated: ${JSON.stringify(error)}`, 'error');
+                    setStatus('auth-status', 'Not authenticated', 'error');
+                }
+
+            } catch (error) {
+                log('auth-log', `❌ Error checking user: ${error.message}`, 'error');
+                setStatus('auth-status', 'Error checking authentication', 'error');
+            }
+        }
+
+        // Clear session
+        async function clearSession() {
+            if (!workingAPI) {
+                log('auth-log', '❌ No working API connection.', 'error');
+                return;
+            }
+
+            log('auth-log', 'Clearing session...', 'info');
+
+            try {
+                await fetch(`${workingAPI}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                // Also clear any local storage
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear cookies manually
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+
+                log('auth-log', '✅ Session cleared', 'success');
+                setStatus('auth-status', 'Session cleared', 'success');
+                analyzeCookies();
+
+            } catch (error) {
+                log('auth-log', `❌ Error clearing session: ${error.message}`, 'error');
+            }
+        }
+
+        // Analyze cookies
+        function analyzeCookies() {
+            const cookies = document.cookie;
+            const cookieInfo = document.getElementById('cookie-info');
+            
+            if (cookies) {
+                cookieInfo.textContent = `Cookies found: ${cookies}`;
+                setStatus('cookie-status', 'Cookies present', 'success');
+                log('auth-log', `Cookies: ${cookies}`, 'info');
+            } else {
+                cookieInfo.textContent = 'No cookies found';
+                setStatus('cookie-status', 'No cookies', 'warning');
+                log('auth-log', 'No cookies found', 'warning');
+            }
+
+            // Check local/session storage
+            const localStorage = window.localStorage.length;
+            const sessionStorage = window.sessionStorage.length;
+            cookieInfo.textContent += `\nLocal Storage items: ${localStorage}`;
+            cookieInfo.textContent += `\nSession Storage items: ${sessionStorage}`;
+        }
+
+        // Test CORS
+        async function testCORS() {
+            if (!workingAPI) {
+                log('network-log', '❌ No working API connection.', 'error');
+                return;
+            }
+
+            log('network-log', 'Testing CORS...', 'info');
+
+            try {
+                const response = await fetch(`${workingAPI}/health`, {
+                    method: 'OPTIONS',
+                    mode: 'cors',
+                    credentials: 'include'
+                });
+
+                log('network-log', `CORS preflight status: ${response.status}`, 'info');
+                log('network-log', `CORS headers: ${JSON.stringify([...response.headers])}`, 'info');
+
+            } catch (error) {
+                log('network-log', `❌ CORS error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test credentials
+        async function testCredentials() {
+            if (!workingAPI) {
+                log('network-log', '❌ No working API connection.', 'error');
+                return;
+            }
+
+            log('network-log', 'Testing credential handling...', 'info');
+
+            try {
+                // Test without credentials
+                const response1 = await fetch(`${workingAPI}/health`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'omit'
+                });
+                log('network-log', `Without credentials: ${response1.status}`, 'info');
+
+                // Test with credentials
+                const response2 = await fetch(`${workingAPI}/health`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'include'
+                });
+                log('network-log', `With credentials: ${response2.status}`, 'info');
+
+            } catch (error) {
+                log('network-log', `❌ Credential test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Clear all browser data
+        function clearAllData() {
+            if (confirm('This will clear all cookies, local storage, and session storage. Continue?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear cookies
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+
+                alert('All browser data cleared. Please refresh the page.');
+                window.location.reload();
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', async function() {
+            log('server-log', 'Initializing debug tool...', 'info');
+            await testServerConnection();
+            analyzeCookies();
+            
+            if (workingAPI) {
+                await testCurrentUser();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -45,3 +45,9 @@ def search_patients(db: Session, query: str):
             models.Patient.referal.contains(query)
         )
     ).all()
+    
+    # Add this function to your crud.py if it's missing:
+
+def get_patient_by_number(db: Session, patient_number: str):
+    """Get patient by patient number"""
+    return db.query(models.Patient).filter(models.Patient.patient_number == patient_number).first()
