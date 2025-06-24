@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 
 # Patient Schemas - Fixed date field types
 class PatientBase(BaseModel):
@@ -42,6 +42,50 @@ class Patient(PatientBase):
 
     class Config:
         from_attributes = True
+
+# Financial Tracking Schemas
+class PatientFinancialBase(BaseModel):
+    patient_id: int
+    month_year: str  # Format: "2024-01" (YYYY-MM)
+    monthly_revenue: float
+    sessions_attended: Optional[int] = 0
+    notes: Optional[str] = None
+
+class PatientFinancialCreate(PatientFinancialBase):
+    pass
+
+class PatientFinancialUpdate(BaseModel):
+    monthly_revenue: Optional[float] = None
+    sessions_attended: Optional[int] = None
+    notes: Optional[str] = None
+
+class PatientFinancial(PatientFinancialBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# Enhanced Patient schema with financial data
+class PatientWithFinancials(Patient):
+    financial_records: List[PatientFinancial] = []
+
+# Financial Summary schemas
+class FinancialSummary(BaseModel):
+    total_patients: int
+    total_monthly_revenue: float
+    average_revenue_per_patient: float
+    top_revenue_patients: List[dict]  # Will contain patient info and revenue
+    monthly_trends: List[dict]  # Will contain month-by-month revenue data
+
+class MonthlyFinancialReport(BaseModel):
+    month_year: str
+    total_revenue: float
+    total_patients: int
+    average_sessions_per_patient: float
+    patient_details: List[dict]
 
 # User Authentication Schemas
 class UserBase(BaseModel):

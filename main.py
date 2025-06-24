@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.orm import Session
+from sqlalchemy import func, desc, extract
 from datetime import datetime, timedelta
 import models
 import schemas
@@ -20,6 +21,7 @@ from pathlib import Path
 from typing import List
 import shutil
 import uuid
+import calendar
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -31,8 +33,8 @@ models.Base.metadata.create_all(bind=engine)
 # Create FastAPI app
 app = FastAPI(
     title="Spectrum Mental Health - Patient Management API",
-    description="Professional patient management system with multi-user authentication",
-    version="2.0.0"
+    description="Professional patient management system with multi-user authentication and financial tracking",
+    version="2.1.0"
 )
 
 # CORS middleware
@@ -191,7 +193,7 @@ async def logout(request: Request, current_user: models.User = Depends(get_curre
 async def create_new_user(
     user_data: schemas.UserCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)  # Any logged-in user can create users
+    current_user: models.User = Depends(get_current_active_user)
 ):
     """Create a new user"""
     try:
@@ -206,7 +208,7 @@ async def list_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)  # Any logged-in user can view users
+    current_user: models.User = Depends(get_current_active_user)
 ):
     """List all users"""
     users = db.query(models.User).offset(skip).limit(limit).all()
@@ -273,7 +275,7 @@ async def delete_user(
 @app.post("/users/{user_id}/reset-password")
 async def reset_user_password(
     user_id: int,
-    password_data: dict,  # {"new_password": "password"}
+    password_data: dict,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
@@ -323,7 +325,7 @@ def read_patients(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)  # Any logged-in user
+    current_user: models.User = Depends(get_current_active_user)
 ):
     logger.info(f"Loading patients for user: {current_user.username}")
     patients = crud.get_patients(db, skip=skip, limit=limit)
@@ -333,7 +335,7 @@ def read_patients(
 def create_patient(
     patient: schemas.PatientCreate, 
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)  # Any logged-in user
+    current_user: models.User = Depends(get_current_active_user)
 ):
     logger.info(f"Creating patient {patient.patient_number} by user: {current_user.username}")
     
@@ -356,7 +358,7 @@ def create_patient(
 def read_patient(
     patient_id: int, 
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)  # Any logged-in user
+    current_user: models.User = Depends(get_current_active_user)
 ):
     logger.info(f"Reading patient {patient_id} by user: {current_user.username}")
     db_patient = crud.get_patient(db, patient_id=patient_id)
@@ -369,7 +371,7 @@ def update_patient(
     patient_id: int,
     patient: schemas.PatientUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)  # Any logged-in user
+    current_user: models.User = Depends(get_current_active_user)
 ):
     logger.info(f"Updating patient {patient_id} by user: {current_user.username}")
     db_patient = crud.get_patient(db, patient_id=patient_id)
@@ -381,7 +383,7 @@ def update_patient(
 def delete_patient(
     patient_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)  # Any logged-in user
+    current_user: models.User = Depends(get_current_active_user)
 ):
     logger.info(f"Deleting patient {patient_id} by user: {current_user.username}")
     db_patient = crud.get_patient(db, patient_id=patient_id)
@@ -399,13 +401,247 @@ def delete_patient(
 def search_patients(
     q: str, 
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)  # Any logged-in user
+    current_user: models.User = Depends(get_current_active_user)
 ):
     logger.info(f"Search query '{q}' by user: {current_user.username}")
     patients = crud.search_patients(db, query=q)
     return patients
 
-# --- PATIENT FILE UPLOAD ENDPOINTS (MOVED ABOVE __main__) ---
+# === FINANCIAL TRACKING ENDPOINTS ===
+
+@app.post("/patients/{patient_id}/financial", response_model=schemas.PatientFinancial)
+async def create_financial_record(
+    patient_id: int,
+    financial_data: schemas.PatientFinancialCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Create a financial record for a patient"""
+    # Verify patient exists
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Check if record already exists for this month
+    existing_record = db.query(models.PatientFinancial).filter(
+        models.PatientFinancial.patient_id == patient_id,
+        models.PatientFinancial.month_year == financial_data.month_year
+    ).first()
+    
+    if existing_record:
+        raise HTTPException(status_code=400, detail="Financial record already exists for this month")
+    
+    # Create new financial record
+    db_financial = models.PatientFinancial(
+        **financial_data.model_dump(),
+        created_by=current_user.username
+    )
+    
+    db.add(db_financial)
+    db.commit()
+    db.refresh(db_financial)
+    
+    logger.info(f"Financial record created for patient {patient_id} by {current_user.username}")
+    return schemas.PatientFinancial.model_validate(db_financial)
+
+@app.get("/patients/{patient_id}/financial", response_model=list[schemas.PatientFinancial])
+async def get_patient_financial_records(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get all financial records for a patient"""
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    financial_records = db.query(models.PatientFinancial).filter(
+        models.PatientFinancial.patient_id == patient_id
+    ).order_by(desc(models.PatientFinancial.month_year)).all()
+    
+    return [schemas.PatientFinancial.model_validate(record) for record in financial_records]
+
+@app.put("/patients/{patient_id}/financial/{financial_id}", response_model=schemas.PatientFinancial)
+async def update_financial_record(
+    patient_id: int,
+    financial_id: int,
+    financial_update: schemas.PatientFinancialUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Update a financial record"""
+    financial_record = db.query(models.PatientFinancial).filter(
+        models.PatientFinancial.id == financial_id,
+        models.PatientFinancial.patient_id == patient_id
+    ).first()
+    
+    if not financial_record:
+        raise HTTPException(status_code=404, detail="Financial record not found")
+    
+    # Update only provided fields
+    update_data = financial_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(financial_record, field, value)
+    
+    financial_record.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(financial_record)
+    
+    logger.info(f"Financial record {financial_id} updated by {current_user.username}")
+    return schemas.PatientFinancial.model_validate(financial_record)
+
+@app.delete("/patients/{patient_id}/financial/{financial_id}")
+async def delete_financial_record(
+    patient_id: int,
+    financial_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Delete a financial record"""
+    financial_record = db.query(models.PatientFinancial).filter(
+        models.PatientFinancial.id == financial_id,
+        models.PatientFinancial.patient_id == patient_id
+    ).first()
+    
+    if not financial_record:
+        raise HTTPException(status_code=404, detail="Financial record not found")
+    
+    db.delete(financial_record)
+    db.commit()
+    
+    logger.info(f"Financial record {financial_id} deleted by {current_user.username}")
+    return {"message": "Financial record deleted successfully"}
+
+@app.get("/financial/summary", response_model=schemas.FinancialSummary)
+async def get_financial_summary(
+    month_year: str = None,  # Optional filter by month (YYYY-MM)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get financial summary with top revenue patients and trends"""
+    query = db.query(models.PatientFinancial)
+    
+    if month_year:
+        query = query.filter(models.PatientFinancial.month_year == month_year)
+    
+    # Get total revenue and patient count
+    financial_records = query.all()
+    total_revenue = sum(record.monthly_revenue for record in financial_records)
+    unique_patients = len(set(record.patient_id for record in financial_records))
+    
+    # Calculate average revenue per patient
+    avg_revenue = total_revenue / unique_patients if unique_patients > 0 else 0
+    
+    # Get top revenue patients
+    patient_revenue = {}
+    for record in financial_records:
+        if record.patient_id not in patient_revenue:
+            patient_revenue[record.patient_id] = 0
+        patient_revenue[record.patient_id] += record.monthly_revenue
+    
+    # Get patient details for top revenue
+    top_patients = []
+    for patient_id, revenue in sorted(patient_revenue.items(), key=lambda x: x[1], reverse=True)[:10]:
+        patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+        if patient:
+            top_patients.append({
+                "patient_id": patient_id,
+                "patient_number": patient.patient_number,
+                "name": f"{patient.first_name} {patient.last_name}",
+                "total_revenue": revenue
+            })
+    
+    # Get monthly trends (last 12 months)
+    monthly_trends = []
+    monthly_data = db.query(
+        models.PatientFinancial.month_year,
+        func.sum(models.PatientFinancial.monthly_revenue).label('total_revenue'),
+        func.count(func.distinct(models.PatientFinancial.patient_id)).label('patient_count')
+    ).group_by(models.PatientFinancial.month_year).order_by(models.PatientFinancial.month_year).all()
+    
+    for month_data in monthly_data:
+        monthly_trends.append({
+            "month_year": month_data.month_year,
+            "total_revenue": float(month_data.total_revenue),
+            "patient_count": month_data.patient_count
+        })
+    
+    return schemas.FinancialSummary(
+        total_patients=unique_patients,
+        total_monthly_revenue=total_revenue,
+        average_revenue_per_patient=avg_revenue,
+        top_revenue_patients=top_patients,
+        monthly_trends=monthly_trends
+    )
+
+@app.get("/financial/monthly-report/{month_year}", response_model=schemas.MonthlyFinancialReport)
+async def get_monthly_financial_report(
+    month_year: str,  # Format: YYYY-MM
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get detailed financial report for a specific month"""
+    # Get all financial records for the month
+    financial_records = db.query(models.PatientFinancial).filter(
+        models.PatientFinancial.month_year == month_year
+    ).all()
+    
+    if not financial_records:
+        raise HTTPException(status_code=404, detail="No financial records found for this month")
+    
+    # Calculate totals
+    total_revenue = sum(record.monthly_revenue for record in financial_records)
+    total_patients = len(financial_records)
+    total_sessions = sum(record.sessions_attended for record in financial_records)
+    avg_sessions = total_sessions / total_patients if total_patients > 0 else 0
+    
+    # Get patient details
+    patient_details = []
+    for record in financial_records:
+        patient = db.query(models.Patient).filter(models.Patient.id == record.patient_id).first()
+        if patient:
+            patient_details.append({
+                "patient_id": record.patient_id,
+                "patient_number": patient.patient_number,
+                "name": f"{patient.first_name} {patient.last_name}",
+                "monthly_revenue": record.monthly_revenue,
+                "sessions_attended": record.sessions_attended,
+                "notes": record.notes
+            })
+    
+    # Sort by revenue (highest first)
+    patient_details.sort(key=lambda x: x["monthly_revenue"], reverse=True)
+    
+    return schemas.MonthlyFinancialReport(
+        month_year=month_year,
+        total_revenue=total_revenue,
+        total_patients=total_patients,
+        average_sessions_per_patient=avg_sessions,
+        patient_details=patient_details
+    )
+
+@app.get("/financial/all-records", response_model=list[schemas.PatientFinancial])
+async def get_all_financial_records(
+    skip: int = 0,
+    limit: int = 100,
+    month_year: str = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get all financial records with optional filtering"""
+    query = db.query(models.PatientFinancial)
+    
+    if month_year:
+        query = query.filter(models.PatientFinancial.month_year == month_year)
+    
+    financial_records = query.order_by(
+        desc(models.PatientFinancial.month_year),
+        desc(models.PatientFinancial.monthly_revenue)
+    ).offset(skip).limit(limit).all()
+    
+    return [schemas.PatientFinancial.model_validate(record) for record in financial_records]
+
+# --- PATIENT FILE UPLOAD ENDPOINTS ---
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
@@ -479,10 +715,11 @@ def get_patient_file(
 
 if __name__ == "__main__":
     import uvicorn
-    print("🏥 Starting Spectrum Mental Health - Multi-User Support")
-    print("=" * 60)
+    print("🏥 Starting Spectrum Mental Health - Multi-User Support with Financial Tracking")
+    print("=" * 70)
     print("🔧 Multiple users, same access level")
+    print("💰 Financial tracking enabled")
     print("🌐 Go to: http://localhost:8000/")
-    print("📋 Everyone can manage users and patients")
-    print("=" * 60)
+    print("📋 Everyone can manage users, patients, and finances")
+    print("=" * 70)
     uvicorn.run(app, host="0.0.0.0", port=8000)

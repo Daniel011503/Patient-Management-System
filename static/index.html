@@ -410,6 +410,7 @@
             <button class="nav-btn active" onclick="showSection('add-patient')">Add Patient</button>
             <button class="nav-btn" onclick="showSection('patient-log')">Patient Log</button>
             <button class="nav-btn" onclick="showSection('user-management')">Manage Users</button>
+            <button class="nav-btn" onclick="showSection('financial-tracking')">Financial Tracking</button>
             <button class="nav-btn logout-btn" onclick="logout()" style="background: rgba(255, 99, 99, 0.3);">Logout</button>
         </div>
 
@@ -733,6 +734,17 @@
                 </div>
             </div>
         </div>
+
+        <!-- Financial Tracking Section -->
+        <div id="financial-tracking" class="section">
+            <h2>Financial Tracking</h2>
+            <div class="hipaa-notice">
+                <strong>Notice:</strong> Financial data is confidential. Only authorized users may view or edit financial records.
+            </div>
+            <div id="financial-tracking-content">
+                <!-- Financial tracking UI will be rendered here by JS -->
+            </div>
+        </div>
     </div>
 
     <!-- Add User Modal -->
@@ -969,12 +981,18 @@
                 // Hide Manage Users nav and section for non-admins
                 const manageUsersBtn = Array.from(document.getElementsByClassName('nav-btn')).find(btn => btn.textContent.trim() === 'Manage Users');
                 const userManagementSection = document.getElementById('user-management');
+                const financialTabBtn = Array.from(document.getElementsByClassName('nav-btn')).find(btn => btn.textContent.trim() === 'Financial Tracking');
+                const financialSection = document.getElementById('financial-tracking');
                 if (currentUser.role !== 'admin') {
                     if (manageUsersBtn) manageUsersBtn.style.display = 'none';
                     if (userManagementSection) userManagementSection.style.display = 'none';
+                    if (financialTabBtn) financialTabBtn.style.display = 'none';
+                    if (financialSection) financialSection.style.display = 'none';
                 } else {
                     if (manageUsersBtn) manageUsersBtn.style.display = '';
                     if (userManagementSection) userManagementSection.style.display = '';
+                    if (financialTabBtn) financialTabBtn.style.display = '';
+                    if (financialSection) financialSection.style.display = '';
                 }
             }
         }
@@ -1050,6 +1068,8 @@
                 loadPatients();
             } else if (sectionId === 'user-management') {
                 loadUsers();
+            } else if (sectionId === 'financial-tracking') {
+                renderFinancialTracking();
             }
         }
 
@@ -1726,6 +1746,173 @@
             // Optionally, revoke the blob URL after some time
             setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
         }
+
+        // === FINANCIAL TRACKING LOGIC ===
+
+async function renderFinancialTracking() {
+    const container = document.getElementById('financial-tracking-content');
+    if (!currentUser) return;
+    // Patient selector
+    let patientOptions = allPatients.map(p => `<option value="${p.id}">${p.patient_number} - ${p.first_name} ${p.last_name}</option>`).join('');
+    if (!patientOptions) {
+        container.innerHTML = '<div style="color:#e74c3c;">No patients found. Add a patient first.</div>';
+        return;
+    }
+    // Month selector (default to current month)
+    const now = new Date();
+    const defaultMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    container.innerHTML = `
+        <form id="financialSelectForm" style="margin-bottom:20px; display:flex; align-items:center; gap:20px;">
+            <label><strong>Patient:</strong></label>
+            <select id="financialPatientSelect" required style="min-width:220px;">${patientOptions}</select>
+            <label><strong>Month:</strong></label>
+            <input type="month" id="financialMonthSelect" value="${defaultMonth}" required style="min-width:140px;" />
+            <button type="submit" class="btn btn-small">View</button>
+        </form>
+        <div id="financialRecordFormContainer"></div>
+        <div id="financialRecordsListContainer" style="margin-top:30px;"></div>
+    `;
+    document.getElementById('financialSelectForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const patientId = document.getElementById('financialPatientSelect').value;
+        const monthYear = document.getElementById('financialMonthSelect').value;
+        await loadFinancialRecordForm(patientId, monthYear);
+        await loadFinancialRecordsList(patientId);
+    });
+    // Auto-load for first patient/month
+    const firstPatientId = allPatients[0].id;
+    await loadFinancialRecordForm(firstPatientId, defaultMonth);
+    await loadFinancialRecordsList(firstPatientId);
+}
+
+async function loadFinancialRecordForm(patientId, monthYear) {
+    const container = document.getElementById('financialRecordFormContainer');
+    container.innerHTML = '<div>Loading...</div>';
+    // Fetch record for this patient/month
+    let record = null;
+    try {
+        const resp = await authenticatedFetch(`${API_BASE}/patients/${patientId}/financial`);
+        if (resp && resp.ok) {
+            const records = await resp.json();
+            record = records.find(r => r.month_year === monthYear);
+        }
+    } catch {}
+    // Only admins can add/edit
+    if (currentUser.role === 'admin') {
+        container.innerHTML = `
+            <form id="financialRecordForm" style="background:#f8f9fa; border-radius:8px; padding:18px 22px; box-shadow:0 2px 8px #0001; margin-bottom:18px;">
+                <input type="hidden" id="finPatientId" value="${patientId}" />
+                <input type="hidden" id="finMonthYear" value="${monthYear}" />
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>Month/Year</label>
+                        <input type="text" value="${monthYear}" disabled style="background:#eee;" />
+                    </div>
+                    <div class="form-group">
+                        <label>Monthly Revenue ($)</label>
+                        <input type="number" id="finRevenue" name="monthly_revenue" min="0" step="0.01" value="${record ? record.monthly_revenue : ''}" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Sessions Attended</label>
+                        <input type="number" id="finSessions" name="sessions_attended" min="0" value="${record ? record.sessions_attended : ''}" required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" id="finNotes" name="notes" value="${record ? (record.notes || '') : ''}" />
+                </div>
+                <button type="submit" class="btn" style="margin-top:10px;">${record ? 'Update' : 'Add'} Record</button>
+                <div id="finFormAlert" style="margin-top:10px;"></div>
+            </form>
+        `;
+        document.getElementById('financialRecordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const revenue = parseFloat(document.getElementById('finRevenue').value);
+            const sessions = parseInt(document.getElementById('finSessions').value);
+            const notes = document.getElementById('finNotes').value;
+            const alertDiv = document.getElementById('finFormAlert');
+            try {
+                let resp;
+                if (record) {
+                    // Update
+                    resp = await authenticatedFetch(`${API_BASE}/patients/${patientId}/financial/${record.id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ monthly_revenue: revenue, sessions_attended: sessions, notes })
+                    });
+                } else {
+                    // Create
+                    resp = await authenticatedFetch(`${API_BASE}/patients/${patientId}/financial`, {
+                        method: 'POST',
+                        body: JSON.stringify({ patient_id: patientId, month_year: monthYear, monthly_revenue: revenue, sessions_attended: sessions, notes })
+                    });
+                }
+                if (resp && resp.ok) {
+                    alertDiv.innerHTML = '<span style="color:green;">Saved!</span>';
+                    await loadFinancialRecordsList(patientId);
+                } else if (resp) {
+                    const err = await resp.json();
+                    alertDiv.innerHTML = `<span style='color:#e74c3c;'>${err.detail || 'Error saving record.'}</span>`;
+                }
+            } catch (err) {
+                alertDiv.innerHTML = '<span style="color:#e74c3c;">Error saving record.</span>';
+            }
+        });
+    } else {
+        // Non-admins: just show info
+        if (record) {
+            container.innerHTML = `<div><strong>Revenue:</strong> $${record.monthly_revenue} | <strong>Sessions:</strong> ${record.sessions_attended}<br><strong>Notes:</strong> ${record.notes || ''}</div>`;
+        } else {
+            container.innerHTML = '<div style="color:#888;">No record for this month.</div>';
+        }
+    }
+}
+
+async function loadFinancialRecordsList(patientId) {
+    const container = document.getElementById('financialRecordsListContainer');
+    container.innerHTML = 'Loading...';
+    try {
+        const resp = await authenticatedFetch(`${API_BASE}/patients/${patientId}/financial`);
+        if (resp && resp.ok) {
+            const records = await resp.json();
+            if (records.length === 0) {
+                container.innerHTML = '<div style="color:#888;">No financial records for this patient.</div>';
+                return;
+            }
+            container.innerHTML = `<h4 style='margin-bottom:10px;'>Financial History</h4><div style='overflow-x:auto;'><table class="table" style="min-width:600px; background:#fff; border-radius:8px; box-shadow:0 2px 8px #0001; border-collapse:separate; border-spacing:0;">
+                <thead style='background:#f1f3f6;'>
+                    <tr>
+                        <th style='padding:10px 16px;'>Month</th>
+                        <th style='padding:10px 16px;'>Revenue ($)</th>
+                        <th style='padding:10px 16px;'>Sessions</th>
+                        <th style='padding:10px 16px;'>Notes</th>
+                        <th style='padding:10px 16px;'>Created</th>
+                    </tr>
+                </thead>
+                <tbody>` +
+                records.map(r => `<tr style='border-bottom:1px solid #f0f0f0;'>
+                    <td style='padding:8px 16px; font-weight:500;'>${r.month_year}</td>
+                    <td style='padding:8px 16px; color:#27ae60; font-weight:600;'>$${parseFloat(r.monthly_revenue).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td style='padding:8px 16px;'>${r.sessions_attended}</td>
+                    <td style='padding:8px 16px;'>${r.notes ? r.notes : ''}</td>
+                    <td style='padding:8px 16px; color:#888;'>${new Date(r.created_at).toLocaleDateString()}</td>
+                </tr>`).join('') +
+                '</tbody></table></div>';
+        } else {
+            container.innerHTML = '<div style="color:#e74c3c;">Error loading records.</div>';
+        }
+    } catch {
+        container.innerHTML = '<div style="color:#e74c3c;">Error loading records.</div>';
+    }
+}
+
+// Hook up to navigation
+const origShowSection = showSection;
+showSection = function(sectionId) {
+    origShowSection(sectionId);
+    if (sectionId === 'financial-tracking') {
+        renderFinancialTracking();
+    }
+};
     </script>
 </body>
 </html>
