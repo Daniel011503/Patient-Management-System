@@ -962,11 +962,20 @@
         // Display user information
         function displayUserInfo() {
             const userInfoDiv = document.getElementById('userInfo');
-            
             if (currentUser) {
                 userInfoDiv.innerHTML = `
                     <span>Welcome, <strong>${currentUser.full_name}</strong> | 🔒 Secure Session</span>
                 `;
+                // Hide Manage Users nav and section for non-admins
+                const manageUsersBtn = Array.from(document.getElementsByClassName('nav-btn')).find(btn => btn.textContent.trim() === 'Manage Users');
+                const userManagementSection = document.getElementById('user-management');
+                if (currentUser.role !== 'admin') {
+                    if (manageUsersBtn) manageUsersBtn.style.display = 'none';
+                    if (userManagementSection) userManagementSection.style.display = 'none';
+                } else {
+                    if (manageUsersBtn) manageUsersBtn.style.display = '';
+                    if (userManagementSection) userManagementSection.style.display = '';
+                }
             }
         }
 
