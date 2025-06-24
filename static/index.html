@@ -154,20 +154,28 @@
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
         }
 
+        .btn-success {
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+        }
+
         .btn-small {
             padding: 8px 16px;
             font-size: 14px;
             margin: 0 5px;
         }
 
-        .patients-grid {
+        .users-grid, .patients-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
 
-        .patient-card {
+        .user-card, .patient-card {
             background: white;
             border-radius: 15px;
             padding: 20px;
@@ -176,12 +184,17 @@
             border-left: 4px solid #667eea;
         }
 
-        .patient-card:hover {
+        .user-card:hover, .patient-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
 
-        .patient-name {
+        .user-card.inactive {
+            opacity: 0.6;
+            border-left-color: #e74c3c;
+        }
+
+        .user-name, .patient-name {
             font-size: 18px;
             font-weight: 700;
             color: #333;
@@ -195,14 +208,33 @@
             margin-bottom: 10px;
         }
 
-        .patient-details {
+        .user-details, .patient-details {
             color: #666;
             line-height: 1.6;
             font-size: 14px;
         }
 
-        .patient-details strong {
+        .user-details strong, .patient-details strong {
             color: #333;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .status-badge.active {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-badge.inactive {
+            background: #e74c3c;
+            color: white;
         }
 
         .search-box {
@@ -308,6 +340,7 @@
             color: #667eea;
         }
 
+        /* Patient info grid styles */
         .patient-info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -349,7 +382,7 @@
                 align-items: center;
             }
             
-            .patients-grid {
+            .users-grid, .patients-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -376,6 +409,7 @@
         <div class="nav">
             <button class="nav-btn active" onclick="showSection('add-patient')">Add Patient</button>
             <button class="nav-btn" onclick="showSection('patient-log')">Patient Log</button>
+            <button class="nav-btn" onclick="showSection('user-management')">Manage Users</button>
             <button class="nav-btn logout-btn" onclick="logout()" style="background: rgba(255, 99, 99, 0.3);">Logout</button>
         </div>
 
@@ -572,7 +606,7 @@
 
                     <div class="form-group">
                         <label for="editAddress">Address</label>
-                        <input type="text" id="editAddress" name="address">
+                        <input type="text" id="editAddress" name="address" placeholder="Full address including city, state, zip">
                     </div>
 
                     <div class="form-row-3">
@@ -582,11 +616,11 @@
                         </div>
                         <div class="form-group">
                             <label for="editPhone">Phone Number</label>
-                            <input type="tel" id="editPhone" name="phone">
+                            <input type="tel" id="editPhone" name="phone" placeholder="(305) 555-0123">
                         </div>
                         <div class="form-group">
                             <label for="editSsn">SSN</label>
-                            <input type="text" id="editSsn" name="ssn">
+                            <input type="text" id="editSsn" name="ssn" placeholder="XXX-XX-XXXX" maxlength="11">
                         </div>
                     </div>
 
@@ -617,7 +651,7 @@
                         </div>
                         <div class="form-group">
                             <label for="editReferal">Referal</label>
-                            <input type="text" id="editReferal" name="referal">
+                            <input type="text" id="editReferal" name="referal" placeholder="Who referred this patient?">
                         </div>
                     </div>
 
@@ -628,13 +662,13 @@
                         </div>
                         <div class="form-group">
                             <label for="editAuthorization">Authorization</label>
-                            <input type="text" id="editAuthorization" name="authorization">
+                            <input type="text" id="editAuthorization" name="authorization" placeholder="Authorization details">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="editDiagnosis">Diagnosis</label>
-                        <input type="text" id="editDiagnosis" name="diagnosis">
+                        <input type="text" id="editDiagnosis" name="diagnosis" placeholder="Diagnosis codes and description">
                     </div>
 
                     <div class="form-row-2">
@@ -651,22 +685,22 @@
                     <div class="form-row-2">
                         <div class="form-group">
                             <label for="editCode1">Code 1</label>
-                            <input type="text" id="editCode1" name="code1">
+                            <input type="text" id="editCode1" name="code1" placeholder="e.g., A3329(1)">
                         </div>
                         <div class="form-group">
                             <label for="editCode2">Code 2</label>
-                            <input type="text" id="editCode2" name="code2">
+                            <input type="text" id="editCode2" name="code2" placeholder="e.g., B1234(2)">
                         </div>
                     </div>
 
                     <div class="form-row-2">
                         <div class="form-group">
                             <label for="editCode3">Code 3</label>
-                            <input type="text" id="editCode3" name="code3">
+                            <input type="text" id="editCode3" name="code3" placeholder="e.g., C5678(3)">
                         </div>
                         <div class="form-group">
                             <label for="editCode4">Code 4</label>
-                            <input type="text" id="editCode4" name="code4">
+                            <input type="text" id="editCode4" name="code4" placeholder="e.g., D9876(4)">
                         </div>
                     </div>
 
@@ -676,6 +710,99 @@
                     </div>
                 </form>
             </div>
+        </div>
+
+        <!-- User Management Section -->
+        <div id="user-management" class="section">
+            <div id="user-list-view">
+                <h2>Manage Users</h2>
+                <p style="margin-bottom: 20px; color: #666;">Create and manage user accounts for the system. All users have the same access level.</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-success" onclick="showAddUserModal()">Add New User</button>
+                </div>
+
+                <input type="text" class="search-box" id="userSearchBox" placeholder="Search users by name, username, or email...">
+                
+                <div id="userLoading" class="loading" style="display: none;">
+                    Loading users...
+                </div>
+                
+                <div id="usersContainer" class="users-grid">
+                    <!-- User cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New User</h2>
+                <span class="close" onclick="closeAddUserModal()">&times;</span>
+            </div>
+            <div id="addUserAlert"></div>
+            <form id="addUserForm">
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="newUsername">Username <span class="required">*</span></label>
+                        <input type="text" id="newUsername" name="username" required placeholder="Enter username">
+                    </div>
+                    <div class="form-group">
+                        <label for="newEmail">Email <span class="required">*</span></label>
+                        <input type="email" id="newEmail" name="email" required placeholder="user@example.com">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newFullName">Full Name <span class="required">*</span></label>
+                    <input type="text" id="newFullName" name="full_name" required placeholder="Enter full name">
+                </div>
+                
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="newRole">Role <span class="required">*</span></label>
+                        <select id="newRole" name="role" required>
+                            <option value="">Select Role</option>
+                            <option value="staff">Staff Member</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Password <span class="required">*</span></label>
+                        <input type="password" id="newPassword" name="password" required placeholder="Minimum 8 characters">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn">Create User</button>
+                    <button type="button" class="btn btn-danger" onclick="closeAddUserModal()" style="margin-left: 15px;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Reset Password</h2>
+                <span class="close" onclick="closeResetPasswordModal()">&times;</span>
+            </div>
+            <div id="resetPasswordAlert"></div>
+            <form id="resetPasswordForm">
+                <input type="hidden" id="resetUserId">
+                <p>Reset password for: <strong id="resetUserName"></strong></p>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="resetNewPassword">New Password <span class="required">*</span></label>
+                    <input type="password" id="resetNewPassword" name="new_password" required placeholder="Minimum 8 characters">
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn">Reset Password</button>
+                    <button type="button" class="btn btn-danger" onclick="closeResetPasswordModal()" style="margin-left: 15px;">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -693,9 +820,10 @@
     </div>
 
     <script>
-        // API Base URL - Same origin (no CORS issues)
-        const API_BASE = window.location.origin; // Uses same domain and port
+        // API Base URL
+        const API_BASE = window.location.origin;
         let allPatients = [];
+        let allUsers = [];
         let currentUser = null;
         let accessToken = null;
 
@@ -707,8 +835,7 @@
                 this.TOKEN_EXPIRY_KEY = 'spectrum_token_expiry';
             }
 
-            // Store authentication data
-            setAuth(token, user, expiresInMinutes = 1440) { // 24 hours default
+            setAuth(token, user, expiresInMinutes = 1440) {
                 const expiryTime = new Date().getTime() + (expiresInMinutes * 60 * 1000);
                 
                 sessionStorage.setItem(this.TOKEN_KEY, token);
@@ -721,7 +848,6 @@
                 console.log('✅ Authentication data stored');
             }
 
-            // Get stored authentication data
             getAuth() {
                 const token = sessionStorage.getItem(this.TOKEN_KEY);
                 const userStr = sessionStorage.getItem(this.USER_KEY);
@@ -750,7 +876,6 @@
                 }
             }
 
-            // Clear authentication data
             clearAuth() {
                 sessionStorage.removeItem(this.TOKEN_KEY);
                 sessionStorage.removeItem(this.USER_KEY);
@@ -760,7 +885,6 @@
                 console.log('🗑️ Authentication data cleared');
             }
 
-            // Check if user is authenticated
             isAuthenticated() {
                 return this.getAuth() !== null;
             }
@@ -768,11 +892,10 @@
 
         const authManager = new AuthManager();
 
-        // Enhanced authentication check
+        // Authentication check
         async function checkAuthentication() {
             console.log('🔐 Checking authentication status...');
             
-            // First check stored auth
             const storedAuth = authManager.getAuth();
             if (!storedAuth) {
                 console.log('❌ No valid stored authentication');
@@ -826,7 +949,6 @@
             
             const response = await fetch(url, { ...defaultOptions, ...options });
             
-            // If unauthorized, clear auth and redirect
             if (response.status === 401) {
                 console.log('❌ Token expired or invalid, redirecting to login');
                 authManager.clearAuth();
@@ -840,20 +962,20 @@
         // Display user information
         function displayUserInfo() {
             const userInfoDiv = document.getElementById('userInfo');
+            
             if (currentUser) {
                 userInfoDiv.innerHTML = `
-                    <span>Welcome, <strong>${currentUser.full_name}</strong> (${currentUser.role}) | 🔒 Secure Session</span>
+                    <span>Welcome, <strong>${currentUser.full_name}</strong> | 🔒 Secure Session</span>
                 `;
             }
         }
 
-        // Enhanced logout function
+        // Logout function
         async function logout() {
             if (confirm('Are you sure you want to logout?')) {
                 try {
                     console.log('🚪 Logging out...');
                     
-                    // Try to call logout endpoint
                     if (accessToken) {
                         await fetch(`${API_BASE}/auth/logout`, {
                             method: 'POST',
@@ -864,16 +986,11 @@
                         });
                     }
                     
-                    // Clear authentication data
                     authManager.clearAuth();
-                    
                     console.log('✅ Logout completed, redirecting to login');
-                    
-                    // Redirect to login
                     window.location.href = '/static/login.html';
                 } catch (error) {
                     console.error('Logout error:', error);
-                    // Force redirect even if logout request fails
                     authManager.clearAuth();
                     window.location.href = '/static/login.html';
                 }
@@ -891,6 +1008,7 @@
                 displayUserInfo();
                 setTimeout(() => {
                     loadPatients();
+                    loadUsers();
                 }, 500);
             } else {
                 console.log('❌ User not authenticated, redirecting to login');
@@ -921,8 +1039,228 @@
             // Load data if needed
             if (sectionId === 'patient-log') {
                 loadPatients();
+            } else if (sectionId === 'user-management') {
+                loadUsers();
             }
         }
+
+        // USER MANAGEMENT FUNCTIONS
+
+        // Load Users
+        async function loadUsers() {
+            document.getElementById('userLoading').style.display = 'block';
+            
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/users/`);
+                if (response && response.ok) {
+                    allUsers = await response.json();
+                    displayUsers(allUsers);
+                    console.log(`✅ Loaded ${allUsers.length} users`);
+                } else {
+                    document.getElementById('usersContainer').innerHTML = '<p>Error loading users</p>';
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersContainer').innerHTML = '<p>Error connecting to server</p>';
+            }
+            
+            document.getElementById('userLoading').style.display = 'none';
+        }
+
+        // Display Users
+        function displayUsers(users) {
+            const container = document.getElementById('usersContainer');
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p>No users found</p>';
+                return;
+            }
+            
+            container.innerHTML = users.map(user => `
+                <div class="user-card ${user.is_active ? '' : 'inactive'}">
+                    <span class="status-badge ${user.is_active ? 'active' : 'inactive'}">
+                        ${user.is_active ? 'Active' : 'Disabled'}
+                    </span>
+                    <div class="user-name">${user.full_name}</div>
+                    <div class="user-details">
+                        <strong>Username:</strong> ${user.username}<br>
+                        <strong>Email:</strong> ${user.email}<br>
+                        <strong>Role:</strong> ${user.role}<br>
+                        <strong>Created:</strong> ${new Date(user.created_at).toLocaleDateString()}<br>
+                        <strong>Last Login:</strong> ${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                    </div>
+                    <div style="margin-top: 15px;">
+                        ${user.id !== currentUser.id ? `
+                            <button class="btn btn-small btn-warning" onclick="showResetPasswordModal(${user.id}, '${user.username}')">Reset Password</button>
+                            <button class="btn btn-small ${user.is_active ? 'btn-danger' : 'btn-success'}" onclick="toggleUserStatus(${user.id})">
+                                ${user.is_active ? 'Disable' : 'Enable'}
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="deleteUser(${user.id}, '${user.username}')">Delete</button>
+                        ` : '<span style="color: #666; font-style: italic;">Current User</span>'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Search Users
+        document.addEventListener('DOMContentLoaded', function() {
+            const userSearchBox = document.getElementById('userSearchBox');
+            if (userSearchBox) {
+                userSearchBox.addEventListener('input', function(e) {
+                    const query = e.target.value.toLowerCase();
+                    const filteredUsers = allUsers.filter(user => 
+                        user.username.toLowerCase().includes(query) ||
+                        user.full_name.toLowerCase().includes(query) ||
+                        user.email.toLowerCase().includes(query) ||
+                        user.role.toLowerCase().includes(query)
+                    );
+                    displayUsers(filteredUsers);
+                });
+            }
+        });
+
+        // Modal functions
+        function showAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'block';
+            document.getElementById('addUserAlert').innerHTML = '';
+            document.getElementById('addUserForm').reset();
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'none';
+        }
+
+        function showResetPasswordModal(userId, username) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetUserName').textContent = username;
+            document.getElementById('resetPasswordModal').style.display = 'block';
+            document.getElementById('resetPasswordAlert').innerHTML = '';
+            document.getElementById('resetPasswordForm').reset();
+        }
+
+        function closeResetPasswordModal() {
+            document.getElementById('resetPasswordModal').style.display = 'none';
+        }
+
+        // User management actions
+        async function toggleUserStatus(userId) {
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/users/${userId}/toggle-status`, {
+                    method: 'POST'
+                });
+                
+                if (response && response.ok) {
+                    const result = await response.json();
+                    showAlert('add-alert', result.message, 'success');
+                    loadUsers();
+                } else if (response) {
+                    const error = await response.json();
+                    showAlert('add-alert', `Error: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                console.error('Toggle status error:', error);
+                showAlert('add-alert', 'Error connecting to server.', 'error');
+            }
+        }
+
+        async function deleteUser(userId, username) {
+            if (confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+                try {
+                    const response = await authenticatedFetch(`${API_BASE}/users/${userId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response && response.ok) {
+                        showAlert('add-alert', `User "${username}" deleted successfully`, 'success');
+                        loadUsers();
+                    } else if (response) {
+                        const error = await response.json();
+                        showAlert('add-alert', `Error: ${error.detail}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Delete user error:', error);
+                    showAlert('add-alert', 'Error connecting to server.', 'error');
+                }
+            }
+        }
+
+        // Form handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add User Form
+            const addUserForm = document.getElementById('addUserForm');
+            if (addUserForm) {
+                addUserForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(this);
+                    const userData = {};
+                    
+                    for (let [key, value] of formData.entries()) {
+                        userData[key] = value;
+                    }
+                    
+                    try {
+                        const response = await authenticatedFetch(`${API_BASE}/users/`, {
+                            method: 'POST',
+                            body: JSON.stringify(userData)
+                        });
+                        
+                        if (response && response.ok) {
+                            const result = await response.json();
+                            showAlert('addUserAlert', 'User created successfully!', 'success');
+                            loadUsers();
+                            setTimeout(() => {
+                                closeAddUserModal();
+                            }, 1500);
+                        } else if (response) {
+                            const error = await response.json();
+                            showAlert('addUserAlert', `Error: ${error.detail}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('User creation error:', error);
+                        showAlert('addUserAlert', 'Error connecting to server.', 'error');
+                    }
+                });
+            }
+
+            // Reset Password Form
+            const resetPasswordForm = document.getElementById('resetPasswordForm');
+            if (resetPasswordForm) {
+                resetPasswordForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const userId = document.getElementById('resetUserId').value;
+                    const newPassword = document.getElementById('resetNewPassword').value;
+                    
+                    if (newPassword.length < 8) {
+                        showAlert('resetPasswordAlert', 'Password must be at least 8 characters long', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await authenticatedFetch(`${API_BASE}/users/${userId}/reset-password`, {
+                            method: 'POST',
+                            body: JSON.stringify({ new_password: newPassword })
+                        });
+                        
+                        if (response && response.ok) {
+                            showAlert('resetPasswordAlert', 'Password reset successfully!', 'success');
+                            setTimeout(() => {
+                                closeResetPasswordModal();
+                            }, 1500);
+                        } else if (response) {
+                            const error = await response.json();
+                            showAlert('resetPasswordAlert', `Error: ${error.detail}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Password reset error:', error);
+                        showAlert('resetPasswordAlert', 'Error connecting to server.', 'error');
+                    }
+                });
+            }
+        });
+
+        // PATIENT MANAGEMENT FUNCTIONS
 
         // Add Patient Form
         document.getElementById('patientForm').addEventListener('submit', async function(e) {
@@ -937,8 +1275,6 @@
                 }
             }
             
-            console.log('Creating patient:', patientData);
-            
             try {
                 const response = await authenticatedFetch(`${API_BASE}/patients/`, {
                     method: 'POST',
@@ -947,17 +1283,16 @@
                 
                 if (response && response.ok) {
                     const result = await response.json();
-                    console.log('Patient created successfully:', result);
                     showAlert('add-alert', 'Patient added successfully!', 'success');
                     this.reset();
-                    loadPatients(); // Refresh patient list
+                    loadPatients();
                 } else if (response) {
                     const error = await response.json();
                     showAlert('add-alert', `Error: ${error.detail}`, 'error');
                 }
             } catch (error) {
                 console.error('Form submission error:', error);
-                showAlert('add-alert', 'Error connecting to server. Please check your connection.', 'error');
+                showAlert('add-alert', 'Error connecting to server.', 'error');
             }
         });
 
@@ -1022,16 +1357,12 @@
 
         // View Patient Function
         async function viewPatient(patientId) {
-            console.log('Viewing patient ID:', patientId);
-            
             try {
                 const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`);
                 
                 if (response && response.ok) {
                     const patient = await response.json();
-                    console.log('Patient data loaded:', patient);
                     
-                    // Format the patient information for display
                     const modalContent = `
                         <div class="patient-info-grid">
                             <div class="patient-info-item">
@@ -1129,12 +1460,10 @@
                         </div>
                     `;
                     
-                    // Display the modal
                     document.getElementById('modalPatientInfo').innerHTML = modalContent;
                     document.getElementById('patientModal').style.display = 'block';
                     
                 } else {
-                    console.error('Error loading patient');
                     alert('Error loading patient data');
                 }
             } catch (error) {
@@ -1148,50 +1477,20 @@
             document.getElementById('patientModal').style.display = 'none';
         }
 
-        // Close modal when clicking outside of it
-        window.onclick = function(event) {
-            const modal = document.getElementById('patientModal');
-            if (event.target === modal) {
-                closePatientModal();
-            }
-        }
-
-        // Delete Patient
-        async function deletePatient(id) {
-            if (confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
-                try {
-                    const response = await authenticatedFetch(`${API_BASE}/patients/${id}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (response && response.ok) {
-                        showAlert('add-alert', 'Patient deleted successfully', 'success');
-                        loadPatients(); // Reload the list
-                    } else {
-                        alert('Error deleting patient');
-                    }
-                } catch (error) {
-                    alert('Error connecting to server');
-                }
-            }
-        }
-
         // Edit Patient Function
         async function editPatient(patientId) {
-            console.log('Editing patient ID:', patientId);
-            
             try {
                 const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`);
                 
                 if (response && response.ok) {
                     const patient = await response.json();
-                    console.log('Patient data loaded for editing:', patient);
                     
-                    // Fill the edit form with patient data
+                    // Fill ALL the edit form fields with patient data
                     document.getElementById('editPatientId').value = patient.id;
                     document.getElementById('editPatientNumber').value = patient.patient_number || '';
                     document.getElementById('editFirstName').value = patient.first_name || '';
                     document.getElementById('editLastName').value = patient.last_name || '';
+                    document.getElementById('editSession').value = patient.session || '';
                     document.getElementById('editAddress').value = patient.address || '';
                     document.getElementById('editDateOfBirth').value = patient.date_of_birth || '';
                     document.getElementById('editPhone').value = patient.phone || '';
@@ -1199,7 +1498,6 @@
                     document.getElementById('editMedicaidId').value = patient.medicaid_id || '';
                     document.getElementById('editInsurance').value = patient.insurance || '';
                     document.getElementById('editInsuranceId').value = patient.insurance_id || '';
-                    document.getElementById('editSession').value = patient.session || '';
                     document.getElementById('editReferal').value = patient.referal || '';
                     document.getElementById('editPsrDate').value = patient.psr_date || '';
                     document.getElementById('editAuthorization').value = patient.authorization || '';
@@ -1211,11 +1509,10 @@
                     document.getElementById('editCode3').value = patient.code3 || '';
                     document.getElementById('editCode4').value = patient.code4 || '';
                     
-                    // Hide patient list and show edit form
+                    // Show edit form
                     document.getElementById('patient-list-view').style.display = 'none';
                     document.getElementById('patient-edit-view').style.display = 'block';
                 } else {
-                    console.error('Error loading patient for editing');
                     alert('Error loading patient data');
                 }
             } catch (error) {
@@ -1231,59 +1528,94 @@
             document.getElementById('edit-alert').innerHTML = '';
         }
 
+        // Delete Patient
+        async function deletePatient(id) {
+            if (confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
+                try {
+                    const response = await authenticatedFetch(`${API_BASE}/patients/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response && response.ok) {
+                        showAlert('add-alert', 'Patient deleted successfully', 'success');
+                        loadPatients();
+                    } else {
+                        alert('Error deleting patient');
+                    }
+                } catch (error) {
+                    alert('Error connecting to server');
+                }
+            }
+        }
+
+        // Edit Patient Form Handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const editPatientForm = document.getElementById('editPatientForm');
+            if (editPatientForm) {
+                editPatientForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const patientId = document.getElementById('editPatientId').value;
+                    const formData = new FormData(this);
+                    const patientData = {};
+                    
+                    for (let [key, value] of formData.entries()) {
+                        if (key !== 'patient_id' && value.trim() !== '') {
+                            patientData[key] = value;
+                        }
+                    }
+                    
+                    try {
+                        const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`, {
+                            method: 'PUT',
+                            body: JSON.stringify(patientData)
+                        });
+                        
+                        if (response && response.ok) {
+                            showAlert('edit-alert', 'Patient updated successfully!', 'success');
+                            loadPatients();
+                            setTimeout(() => {
+                                cancelEdit();
+                            }, 1500);
+                        } else {
+                            const error = await response.json();
+                            showAlert('edit-alert', `Error: ${error.detail}`, 'error');
+                        }
+                    } catch (error) {
+                        showAlert('edit-alert', 'Error connecting to server.', 'error');
+                    }
+                });
+            }
+        });
+
         // Show Alert
         function showAlert(containerId, message, type) {
             const container = document.getElementById(containerId);
             container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
             
-            // Clear alert after 5 seconds
             setTimeout(() => {
                 container.innerHTML = '';
             }, 5000);
         }
 
-        // Add Edit Patient Form Handler
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('editPatientForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const patientId = document.getElementById('editPatientId').value;
-                const formData = new FormData(this);
-                const patientData = {};
-                
-                for (let [key, value] of formData.entries()) {
-                    if (key !== 'patient_id' && value.trim() !== '') {
-                        patientData[key] = value;
-                    }
-                }
-                
-                console.log('Updating patient:', patientId, patientData);
-                
-                try {
-                    const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`, {
-                        method: 'PUT',
-                        body: JSON.stringify(patientData)
-                    });
-                    
-                    if (response && response.ok) {
-                        const result = await response.json();
-                        showAlert('edit-alert', 'Patient updated successfully!', 'success');
-                        loadPatients(); // Refresh the patient list
-                        setTimeout(() => {
-                            cancelEdit();
-                        }, 1500);
-                    } else {
-                        const error = await response.json();
-                        showAlert('edit-alert', `Error: ${error.detail}`, 'error');
-                    }
-                } catch (error) {
-                    showAlert('edit-alert', 'Error connecting to server.', 'error');
-                }
-            });
-        });
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const patientModal = document.getElementById('patientModal');
+            const addUserModal = document.getElementById('addUserModal');
+            const resetPasswordModal = document.getElementById('resetPasswordModal');
+            
+            if (event.target === patientModal) {
+                closePatientModal();
+            }
+            if (event.target === addUserModal) {
+                closeAddUserModal();
+            }
+            if (event.target === resetPasswordModal) {
+                closeResetPasswordModal();
+            }
+        }
 
-        // Make auth manager available globally for debugging
-        window.authManager = authManager;
+        // Debug function
         window.debugAuth = function() {
             console.log('=== Authentication Debug Info ===');
             console.log('API_BASE:', API_BASE);
@@ -1295,4 +1627,4 @@
         };
     </script>
 </body>
-</html>...
+</html>
