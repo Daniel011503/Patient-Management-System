@@ -641,6 +641,70 @@ async def get_all_financial_records(
     
     return [schemas.PatientFinancial.model_validate(record) for record in financial_records]
 
+@app.get("/financial/report/month/{month_year}")
+def get_monthly_income_report(
+    month_year: str,  # Format: YYYY-MM
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get a report of all patient income for a given month"""
+    records = db.query(models.PatientFinancial).filter(
+        models.PatientFinancial.month_year == month_year
+    ).all()
+    total_income = sum(r.monthly_revenue for r in records)
+    patient_details = [
+        {
+            "patient_id": r.patient_id,
+            "patient_number": db.query(models.Patient).filter(models.Patient.id == r.patient_id).first().patient_number,
+            "name": f"{db.query(models.Patient).filter(models.Patient.id == r.patient_id).first().first_name} {db.query(models.Patient).filter(models.Patient.id == r.patient_id).first().last_name}",
+            "monthly_revenue": r.monthly_revenue,
+            "sessions_attended": r.sessions_attended,
+            "notes": r.notes
+        }
+        for r in records
+    ]
+    return {
+        "month_year": month_year,
+        "total_income": total_income,
+        "patient_details": patient_details
+    }
+
+@app.get("/financial/report/year/{year}")
+def get_yearly_income_report(
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get a report of all patient income for a given year"""
+    records = db.query(models.PatientFinancial).filter(
+        models.PatientFinancial.month_year.like(f"{year}-%")
+    ).all()
+    total_income = sum(r.monthly_revenue for r in records)
+    # Group by patient
+    patient_income = {}
+    for r in records:
+        if r.patient_id not in patient_income:
+            patient = db.query(models.Patient).filter(models.Patient.id == r.patient_id).first()
+            patient_income[r.patient_id] = {
+                "patient_id": r.patient_id,
+                "patient_number": patient.patient_number,
+                "name": f"{patient.first_name} {patient.last_name}",
+                "total_revenue": 0,
+                "months": []
+            }
+        patient_income[r.patient_id]["total_revenue"] += r.monthly_revenue
+        patient_income[r.patient_id]["months"].append({
+            "month_year": r.month_year,
+            "monthly_revenue": r.monthly_revenue,
+            "sessions_attended": r.sessions_attended,
+            "notes": r.notes
+        })
+    return {
+        "year": year,
+        "total_income": total_income,
+        "patient_income": list(patient_income.values())
+    }
+
 # --- PATIENT FILE UPLOAD ENDPOINTS ---
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
