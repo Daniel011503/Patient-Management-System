@@ -1363,8 +1363,44 @@
                 if (response && response.ok) {
                     const patient = await response.json();
                     
+                    // Fetch patient files
+                    let filesHtml = '';
+                    try {
+                        const filesResp = await fetch(`${API_BASE}/patients/${patientId}/files`, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`
+                            }
+                        });
+                        if (filesResp && filesResp.ok) {
+                            const files = await filesResp.json();
+                            if (files.length > 0) {
+                                filesHtml = `<div style="margin-top:20px;"><strong>Uploaded Files:</strong><ul style='margin-top:10px;'>` +
+                                    files.map(f => `<li><a href="#" onclick="openPatientFileInNewTab(${patientId}, '${f.id}', '${f.filename.replace(/'/g, "\\'")}'); return false;">${f.filename}</a></li>`).join('') +
+                                    `</ul></div>`;
+                            } else {
+                                filesHtml = `<div style='margin-top:20px; color:#888;'>No files uploaded for this patient.</div>`;
+                            }
+                        } else {
+                            filesHtml = `<div style='margin-top:20px; color:#e74c3c;'>Error loading files.</div>`;
+                        }
+                    } catch (e) {
+                        filesHtml = `<div style='margin-top:20px; color:#e74c3c;'>Error loading files.</div>`;
+                    }
+
+                    // File upload form
+                    const uploadFormHtml = `
+                        <form id=\"patientFileUploadForm\" enctype=\"multipart/form-data\" style=\"margin-top:20px;\">
+                            <label><strong>Upload File for this Patient:</strong></label><br>
+                            <input type=\"file\" id=\"patientFileInput\" name=\"file\" required style=\"margin-top:8px;\" />
+                            <button type=\"submit\" class=\"btn btn-small\" style=\"margin-left:10px;\">Upload</button>
+                            <div id=\"patientFileUploadAlert\" style=\"margin-top:10px;\"></div>
+                        </form>
+                    `;
+
                     const modalContent = `
-                        <div class="patient-info-grid">
+                        <div class=\"patient-info-grid\">
+
                             <div class="patient-info-item">
                                 <label>Patient Number:</label>
                                 <p>${patient.patient_number || 'Not provided'}</p>
@@ -1458,11 +1494,46 @@
                                 <p>${new Date(patient.updated_at).toLocaleDateString()}</p>
                             </div>
                         </div>
+                        ${uploadFormHtml}
+                        ${filesHtml}
                     `;
                     
                     document.getElementById('modalPatientInfo').innerHTML = modalContent;
                     document.getElementById('patientModal').style.display = 'block';
-                    
+
+                    // Add upload handler
+                    const uploadForm = document.getElementById('patientFileUploadForm');
+                    if (uploadForm) {
+                        uploadForm.addEventListener('submit', async function(e) {
+                            e.preventDefault();
+                            const fileInput = document.getElementById('patientFileInput');
+                            const alertDiv = document.getElementById('patientFileUploadAlert');
+                            if (!fileInput.files.length) {
+                                alertDiv.innerHTML = '<span style=\"color:#e74c3c;\">Please select a file.</span>';
+                                return;
+                            }
+                            const formData = new FormData();
+                            formData.append('file', fileInput.files[0]);
+                            try {
+                                const uploadResp = await fetch(`${API_BASE}/patients/${patientId}/files`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Authorization': `Bearer ${accessToken}`
+                                    },
+                                    body: formData
+                                });
+                                if (uploadResp.ok) {
+                                    alertDiv.innerHTML = '<span style=\"color:green;\">File uploaded!</span>';
+                                    setTimeout(() => viewPatient(patientId), 1000);
+                                } else {
+                                    const err = await uploadResp.json();
+                                    alertDiv.innerHTML = `<span style=\"color:#e74c3c;\">Error: ${err.detail || 'Upload failed.'}</span>`;
+                                }
+                            } catch (err) {
+                                alertDiv.innerHTML = '<span style=\"color:#e74c3c;\">Error uploading file.</span>';
+                            }
+                        });
+                    }
                 } else {
                     alert('Error loading patient data');
                 }
@@ -1625,6 +1696,27 @@
             console.log('Is authenticated:', authManager.isAuthenticated());
             console.log('==================================');
         };
+
+        // Add this function to allow opening patient files in a new tab with authentication
+        async function openPatientFileInNewTab(patientId, fileId, filename) {
+            const url = `${API_BASE}/patients/${patientId}/files/${fileId}`;
+            const response = await fetch(url, {
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`
+                }
+            });
+            if (!response.ok) {
+                alert("Failed to open file: " + response.statusText);
+                return;
+            }
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            // Open in new tab
+            const newTab = window.open();
+            newTab.location = blobUrl;
+            // Optionally, revoke the blob URL after some time
+            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+        }
     </script>
 </body>
 </html>

@@ -14,6 +14,12 @@ from auth import get_current_active_user, create_access_token
 import logging
 import os
 from pydantic import ValidationError
+from fastapi import UploadFile, File
+from fastapi.responses import FileResponse
+from pathlib import Path
+from typing import List
+import shutil
+import uuid
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -382,6 +388,11 @@ def delete_patient(
     if db_patient is None:
         raise HTTPException(status_code=404, detail="Patient not found")
     crud.delete_patient(db=db, patient_id=patient_id)
+    # Delete patient files from uploads directory
+    patient_folder = Path(UPLOAD_DIR) / str(patient_id)
+    if patient_folder.exists() and patient_folder.is_dir():
+        shutil.rmtree(patient_folder)
+        logger.info(f"Deleted files for patient {patient_id} from {patient_folder}")
     return {"message": "Patient deleted successfully"}
 
 @app.get("/search/")
@@ -393,6 +404,78 @@ def search_patients(
     logger.info(f"Search query '{q}' by user: {current_user.username}")
     patients = crud.search_patients(db, query=q)
     return patients
+
+# --- PATIENT FILE UPLOAD ENDPOINTS (MOVED ABOVE __main__) ---
+UPLOAD_DIR = "uploads"
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
+
+@app.post("/patients/{patient_id}/files")
+async def upload_patient_file(
+    patient_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Upload a file for a patient (single file per request, saves .meta for original filename)"""
+    patient_folder = Path(UPLOAD_DIR) / str(patient_id)
+    patient_folder.mkdir(parents=True, exist_ok=True)
+    file_id = str(uuid.uuid4())
+    ext = Path(file.filename).suffix
+    save_path = patient_folder / f"{file_id}{ext}"
+    with open(save_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    # Save original filename as .meta
+    meta_path = patient_folder / f"{file_id}.meta"
+    with open(meta_path, "w", encoding="utf-8") as meta:
+        meta.write(file.filename)
+    return {"id": file_id, "filename": file.filename}
+
+@app.get("/patients/{patient_id}/files")
+def list_patient_files(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """List all files for a patient"""
+    patient_folder = Path(UPLOAD_DIR) / str(patient_id)
+    if not patient_folder.exists():
+        return []
+    files = []
+    for f in patient_folder.iterdir():
+        if f.is_file() and not f.name.endswith('.meta'):
+            file_id = f.stem
+            ext = f.suffix
+            meta_path = patient_folder / f"{file_id}.meta"
+            if meta_path.exists():
+                with open(meta_path, "r", encoding="utf-8") as meta:
+                    orig_name = meta.read().strip()
+            else:
+                orig_name = f.name
+            files.append({"id": file_id, "filename": orig_name})
+    return files
+
+@app.get("/patients/{patient_id}/files/{file_id}")
+def get_patient_file(
+    patient_id: int,
+    file_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Download a file for a patient by file id"""
+    patient_folder = Path(UPLOAD_DIR) / str(patient_id)
+    matches = list(patient_folder.glob(f"{file_id}.*"))
+    matches = [f for f in matches if not f.name.endswith('.meta')]
+    if not matches:
+        raise HTTPException(status_code=404, detail="File not found")
+    file_path = matches[0]
+    meta_path = patient_folder / f"{file_id}.meta"
+    if meta_path.exists():
+        with open(meta_path, "r", encoding="utf-8") as meta:
+            orig_name = meta.read().strip()
+    else:
+        orig_name = file_path.name
+    return FileResponse(file_path, filename=orig_name)
 
 if __name__ == "__main__":
     import uvicorn
