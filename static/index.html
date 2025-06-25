@@ -506,12 +506,47 @@
    <div class="section" id="services" style="display:none;">
     <h2 style="text-align:center;">Services</h2>
     <div style="margin-top:30px; display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:center;">
-     <button class="btn btn-service" style="min-width:180px;">TMS</button>
-     <button class="btn btn-service" style="min-width:180px;">PSR</button>
-     <button class="btn btn-service" style="min-width:180px;">Individual Therapy</button>
-     <button class="btn btn-service" style="min-width:180px;">Evaluations</button>
+     <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('TMS')">TMS</button>
+     <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('PSR')">PSR</button>
+     <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('Individual Therapy')">Individual Therapy</button>
+     <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('Evaluations')">Evaluations</button>
     </div>
-    <div style="color:#888; font-style:italic; margin-top:32px; text-align:center;">Select a service to continue. (Functionality coming soon.)</div>
+    <div style="color:#888; font-style:italic; margin-top:32px; text-align:center;">Select a service to continue.</div>
+   </div>
+
+   <!-- Service Entry Modal -->
+   <div class="modal" id="serviceEntryModal" style="display:none;">
+    <div class="modal-content" style="max-width:420px;">
+     <div class="modal-header">
+      <h2 id="serviceFormTitle">Add Service Entry</h2>
+      <span class="close" onclick="closeServiceEntryModal()">×</span>
+     </div>
+     <form id="serviceEntryForm" onsubmit="submitServiceEntry(event)">
+      <div class="form-group">
+       <label for="servicePatientSearch">Patient Name <span class="required">*</span></label>
+       <input id="servicePatientSearch" name="patient_name" type="text" placeholder="Search patient..." autocomplete="off" required oninput="searchPatientNames(this.value)">
+       <div id="servicePatientSuggestions" class="autocomplete-suggestions"></div>
+      </div>
+      <div class="form-group">
+       <label for="serviceDate">Date of Service <span class="required">*</span></label>
+       <input id="serviceDate" name="service_date" type="date" required>
+      </div>
+      <div class="form-group">
+       <label for="serviceBillingCode">Billing Code <span class="required">*</span></label>
+       <input id="serviceBillingCode" name="billing_code" type="text" required>
+      </div>
+      <div class="form-group">
+       <label for="serviceAmountPaid">Amount Paid <span class="required">*</span></label>
+       <input id="serviceAmountPaid" name="amount_paid" type="number" min="0" step="0.01" required>
+      </div>
+      <input id="serviceType" name="service_type" type="hidden">
+      <input id="servicePatientId" name="patient_id" type="hidden">
+      <div style="margin-top:20px; text-align:right;">
+       <button class="btn" type="submit">Add Service</button>
+       <button class="btn btn-danger" type="button" onclick="closeServiceEntryModal()" style="margin-left:12px;">Cancel</button>
+      </div>
+     </form>
+    </div>
    </div>
   </div>
   <!-- Add User Modal -->
@@ -663,6 +698,76 @@ window.addEventListener('DOMContentLoaded', function() {
   document.getElementById('services').style.display = '';
   document.getElementById('servicesNavBtn').style.display = '';
 });
+function openServiceForm(serviceType) {
+  document.getElementById('serviceFormTitle').textContent = 'Add ' + serviceType + ' Entry';
+  document.getElementById('serviceType').value = serviceType;
+  document.getElementById('serviceEntryForm').reset();
+  document.getElementById('servicePatientId').value = '';
+  document.getElementById('servicePatientSuggestions').innerHTML = '';
+  document.getElementById('serviceEntryModal').style.display = 'block';
+}
+function closeServiceEntryModal() {
+  document.getElementById('serviceEntryModal').style.display = 'none';
+}
+// Patient name autocomplete
+function searchPatientNames(query) {
+  if (!query || query.length < 2) {
+    document.getElementById('servicePatientSuggestions').innerHTML = '';
+    return;
+  }
+  const token = sessionStorage.getItem('spectrum_access_token');
+  fetch(`/patients/?q=${encodeURIComponent(query)}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  })
+    .then(res => res.json())
+    .then(data => {
+      const suggestions = data.map(p => `<div class='suggestion' onclick="selectServicePatient('${p.id}', '${p.first_name} ${p.last_name}')">${p.first_name} ${p.last_name} (${p.patient_number})</div>`).join('');
+      document.getElementById('servicePatientSuggestions').innerHTML = suggestions;
+    });
+}
+function selectServicePatient(id, name) {
+  document.getElementById('servicePatientSearch').value = name;
+  document.getElementById('servicePatientId').value = id;
+  document.getElementById('servicePatientSuggestions').innerHTML = '';
+}
+// Submit service entry
+function submitServiceEntry(e) {
+  e.preventDefault();
+  const form = e.target;
+  const patientId = form.servicePatientId.value;
+  if (!patientId) {
+    alert('Please select a patient from the suggestions.');
+    return;
+  }
+  const payload = {
+    patient_id: patientId,
+    service_type: form.serviceType.value,
+    service_date: form.serviceDate.value,
+    billing_code: form.serviceBillingCode.value,
+    amount_paid: form.serviceAmountPaid.value
+  };
+  const token = sessionStorage.getItem('spectrum_access_token');
+  fetch(`/patients/${patientId}/services`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      closeServiceEntryModal();
+      alert('Service entry added!');
+      // Optionally refresh patient view if open
+      if (typeof loadPatientInfo === 'function') loadPatientInfo(patientId);
+    } else {
+      alert(data.message || 'Failed to add service entry.');
+    }
+  })
+  .catch(() => alert('Failed to add service entry.'));
+}
   </script>
  </body>
 </html>

@@ -48,3 +48,16 @@ class User(Base):
     
     def __repr__(self):
         return f"<User(username='{self.username}', role='{self.role}')>"
+
+class Service(Base):
+    __tablename__ = "services"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    service_type = Column(String, nullable=False)
+    service_date = Column(Date, nullable=False)
+    billing_code = Column(String, nullable=False)
+    amount_paid = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    patient = relationship("Patient", backref="services")

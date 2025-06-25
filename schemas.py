@@ -92,3 +92,22 @@ class LoginResponse(BaseModel):
     redirect_url: Optional[str] = None
     access_token: Optional[str] = None  # JWT access token
     token_type: Optional[str] = None    # Token type (bearer)
+
+# Service Schemas
+class Service(BaseModel):
+    id: int
+    patient_id: int
+    service_type: str
+    service_date: date
+    billing_code: str
+    amount_paid: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ServiceCreate(BaseModel):
+    service_type: str
+    service_date: date
+    billing_code: str
+    amount_paid: float

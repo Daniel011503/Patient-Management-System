@@ -591,6 +591,31 @@
                         </form>
                     `;
 
+                    // After filesHtml and uploadFormHtml are defined, fetch and render service entries
+                    let servicesHtml = '';
+                    try {
+                        const servicesResp = await fetch(`${API_BASE}/patients/${patientId}/services`, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${accessToken}`
+                            }
+                        });
+                        if (servicesResp && servicesResp.ok) {
+                            const services = await servicesResp.json();
+                            if (services.length > 0) {
+                                servicesHtml = `<div style="margin-top:28px;"><strong>Service Entries:</strong><table class='service-table' style='width:100%;margin-top:10px;border-collapse:collapse;'><thead><tr><th>Date</th><th>Type</th><th>Billing Code</th><th>Amount Paid</th></tr></thead><tbody>` +
+                                    services.map(s => `<tr><td>${s.service_date ? new Date(s.service_date).toLocaleDateString() : ''}</td><td>${s.service_type || ''}</td><td>${s.billing_code || ''}</td><td>${s.amount_paid || ''}</td></tr>`).join('') +
+                                    `</tbody></table></div>`;
+                            } else {
+                                servicesHtml = `<div style='margin-top:28px; color:#888;'>No service entries for this patient.</div>`;
+                            }
+                        } else {
+                            servicesHtml = `<div style='margin-top:28px; color:#e74c3c;'>Error loading service entries.</div>`;
+                        }
+                    } catch (e) {
+                        servicesHtml = `<div style='margin-top:28px; color:#e74c3c;'>Error loading service entries.</div>`;
+                    }
+
                     const modalContent = `
                         <div class=\"patient-info-grid\">
 
@@ -689,6 +714,7 @@
                         </div>
                         ${uploadFormHtml}
                         ${filesHtml}
+                        ${servicesHtml}
                     `;
                     
                     document.getElementById('modalPatientInfo').innerHTML = modalContent;

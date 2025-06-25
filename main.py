@@ -322,12 +322,17 @@ async def toggle_user_status(
 # Patient Routes (NO ROLE RESTRICTIONS - ALL LOGGED-IN USERS HAVE SAME ACCESS)
 @app.get("/patients/", response_model=list[schemas.Patient])
 def read_patients(
-    skip: int = 0, 
-    limit: int = 100, 
+    skip: int = 0,
+    limit: int = 100,
+    q: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
     logger.info(f"Loading patients for user: {current_user.username}")
+    if q:
+        # Use the same search logic as /search/ endpoint
+        patients = crud.search_patients(db, query=q)
+        return patients
     patients = crud.get_patients(db, skip=skip, limit=limit)
     return patients
 
@@ -478,6 +483,31 @@ def get_patient_file(
     else:
         orig_name = file_path.name
     return FileResponse(file_path, filename=orig_name)
+
+@app.post("/patients/{patient_id}/services")
+def add_service_entry(
+    patient_id: int,
+    service: schemas.ServiceCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    db_patient = crud.get_patient(db, patient_id)
+    if not db_patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    db_service = crud.add_service_entry(db, patient_id=patient_id, service=service)
+    return {"success": True, "service": schemas.Service.model_validate(db_service)}
+
+@app.get("/patients/{patient_id}/services")
+def get_service_entries(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    db_patient = crud.get_patient(db, patient_id)
+    if not db_patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    # Assuming a relationship: db_patient.services
+    return [schemas.Service.model_validate(s) for s in getattr(db_patient, 'services', [])]
 
 if __name__ == "__main__":
     import uvicorn

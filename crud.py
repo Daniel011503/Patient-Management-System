@@ -57,3 +57,16 @@ def get_patient_with_financials(db: Session, patient_id: int):
         # This will automatically load financial records due to the relationship
         return patient
     return None
+
+def add_service_entry(db: Session, patient_id: int, service: schemas.ServiceCreate):
+    db_service = models.Service(
+        patient_id=patient_id,
+        service_type=service.service_type,
+        service_date=service.service_date,
+        billing_code=service.billing_code,
+        amount_paid=service.amount_paid
+    )
+    db.add(db_service)
+    db.commit()
+    db.refresh(db_service)
+    return db_service
