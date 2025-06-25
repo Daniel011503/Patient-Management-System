@@ -31,8 +31,8 @@
     <button class="nav-btn" onclick="showSection('user-management')">
      Manage Users
     </button>
-    <button class="nav-btn" onclick="showSection('financial-tracking')">
-     Financial Tracking
+    <button class="nav-btn" id="servicesNavBtn" onclick="showSection('services')">
+     Services
     </button>
     <button class="nav-btn logout-btn" onclick="logout()" style="background: rgba(255, 99, 99, 0.3);">
      Logout
@@ -502,20 +502,16 @@
      </div>
     </div>
    </div>
-   <!-- Financial Tracking Section -->
-   <div class="section" id="financial-tracking">
-    <h2>
-     Financial Tracking
-    </h2>
-    <div class="hipaa-notice">
-     <strong>
-      Notice:
-     </strong>
-     Financial data is confidential. Only authorized users may view or edit financial records.
+   <!-- Services Section -->
+   <div class="section" id="services" style="display:none;">
+    <h2 style="text-align:center;">Services</h2>
+    <div style="margin-top:30px; display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:center;">
+     <button class="btn btn-service" style="min-width:180px;">TMS</button>
+     <button class="btn btn-service" style="min-width:180px;">PSR</button>
+     <button class="btn btn-service" style="min-width:180px;">Individual Therapy</button>
+     <button class="btn btn-service" style="min-width:180px;">Evaluations</button>
     </div>
-    <div id="financial-tracking-content">
-     <!-- Financial tracking UI will be rendered here by JS -->
-    </div>
+    <div style="color:#888; font-style:italic; margin-top:32px; text-align:center;">Select a service to continue. (Functionality coming soon.)</div>
    </div>
   </div>
   <!-- Add User Modal -->
@@ -659,6 +655,14 @@
    </div>
   </div>
   <script src="index.js">
+  </script>
+  <script>
+// Show Services tab and section for both admin and staff
+window.addEventListener('DOMContentLoaded', function() {
+  const userInfo = window.currentUser || JSON.parse(localStorage.getItem('currentUser') || '{}');
+  document.getElementById('services').style.display = '';
+  document.getElementById('servicesNavBtn').style.display = '';
+});
   </script>
  </body>
 </html>

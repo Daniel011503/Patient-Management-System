@@ -33,9 +33,6 @@ class Patient(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationship to financial records
-    financial_records = relationship("PatientFinancial", back_populates="patient", cascade="all, delete-orphan")
-
 class User(Base):
     __tablename__ = "users"
     
@@ -51,22 +48,3 @@ class User(Base):
     
     def __repr__(self):
         return f"<User(username='{self.username}', role='{self.role}')>"
-
-class PatientFinancial(Base):
-    __tablename__ = "patient_financials"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
-    month_year = Column(String, nullable=False)  # Format: "2024-01" (YYYY-MM)
-    monthly_revenue = Column(Float, nullable=False)  # Revenue generated this month
-    sessions_attended = Column(Integer, default=0)  # Number of sessions attended
-    notes = Column(Text)  # Optional notes about the financial record
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(String)  # Username of who created this record
-    
-    # Relationship back to patient
-    patient = relationship("Patient", back_populates="financial_records")
-    
-    def __repr__(self):
-        return f"<PatientFinancial(patient_id={self.patient_id}, month_year='{self.month_year}', revenue=${self.monthly_revenue})>"
