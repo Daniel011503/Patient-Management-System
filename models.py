@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, Date, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 
 Base = declarative_base()
@@ -32,7 +32,12 @@ class Patient(Base):
     code4 = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+    services = relationship(
+        "Service",
+        backref=backref("patient"),
+        cascade="all, delete-orphan"
+    )
+
 class User(Base):
     __tablename__ = "users"
     
@@ -53,11 +58,9 @@ class Service(Base):
     __tablename__ = "services"
     
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False)
     service_type = Column(String, nullable=False)
     service_date = Column(Date, nullable=False)
     billing_code = Column(String, nullable=False)
     amount_paid = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-
-    patient = relationship("Patient", backref="services")
