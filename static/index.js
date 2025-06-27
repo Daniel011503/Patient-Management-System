@@ -715,6 +715,10 @@
                         ${uploadFormHtml}
                         ${filesHtml}
                         ${servicesHtml}
+                        <div id="sheet-buttons" style="margin-top: 24px; text-align: center;">
+                            <button id="appointment-sheet-btn" class="btn btn-secondary" style="margin-right: 12px;">Appointment Sheet</button>
+                            <button id="attendance-sheet-btn" class="btn btn-secondary">Attendance Sheet</button>
+                        </div>
                     `;
                     
                     document.getElementById('modalPatientInfo').innerHTML = modalContent;
