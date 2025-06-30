@@ -22,7 +22,10 @@
     </div>
    </div>
    <div class="nav">
-    <button class="nav-btn active" onclick="showSection('add-patient')">
+    <button class="nav-btn active" onclick="showSection('calendar-section')">
+     Calendar
+    </button>
+    <button class="nav-btn" onclick="showSection('add-patient')">
      Add Patient
     </button>
     <button class="nav-btn" onclick="showSection('patient-log')">
@@ -38,8 +41,16 @@
      Logout
     </button>
    </div>
+   <!-- Calendar Section -->
+   <div class="section active" id="calendar-section">
+    <h2>
+     Calendar
+    </h2>
+    <div id="calendarContainer">
+    </div>
+   </div>
    <!-- Add Patient Section -->
-   <div class="section active" id="add-patient">
+   <div class="section" id="add-patient">
     <h2>
      Add New Patient
     </h2>
@@ -555,7 +566,6 @@
      </form>
     </div>
    </div>
- </div>
  <!-- New Sheet Modal for Attendance/Appointment -->
  <div class="modal" id="sheetModal" style="display:none; z-index: 1200;">
   <div class="modal-content" style="max-width:600px;">

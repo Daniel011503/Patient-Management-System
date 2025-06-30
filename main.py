@@ -482,7 +482,9 @@ def get_patient_file(
             orig_name = meta.read().strip()
     else:
         orig_name = file_path.name
-    return FileResponse(file_path, filename=orig_name)
+    response = FileResponse(file_path)
+    response.headers["Content-Disposition"] = f'inline; filename="{orig_name}"'
+    return response
 
 @app.post("/patients/{patient_id}/services")
 def add_service_entry(

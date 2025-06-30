@@ -212,23 +212,31 @@
         });
 
         // Navigation
-        function showSection(sectionId) {
+        function showSection(sectionId, event) {
             // Hide all sections
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
             });
-            
             // Remove active class from all nav buttons
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            
             // Show selected section
             document.getElementById(sectionId).classList.add('active');
-            
-            // Add active class to clicked button
-            event.target.classList.add('active');
-            
+            // Add active class to clicked button if event is provided
+            if (event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // If no event, set active class based on sectionId
+                const btns = document.querySelectorAll('.nav-btn');
+                btns.forEach(btn => {
+                    if (btn.textContent.trim().toLowerCase() ===
+                        (sectionId.replace('-section', '').replace('-', ' ') === 'add patient' ? 'add patient' :
+                        sectionId.replace('-section', '').replace('-', ' ')).toLowerCase()) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
             // Load data if needed
             if (sectionId === 'patient-log') {
                 loadPatients();
@@ -458,34 +466,46 @@
         // Add Patient Form
         document.getElementById('patientForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const formData = new FormData(this);
             const patientData = {};
-            
             for (let [key, value] of formData.entries()) {
                 if (value.trim() !== '') {
                     patientData[key] = value;
                 }
             }
-            
             try {
                 const response = await authenticatedFetch(`${API_BASE}/patients/`, {
                     method: 'POST',
                     body: JSON.stringify(patientData)
                 });
-                
                 if (response && response.ok) {
                     const result = await response.json();
                     showAlert('add-alert', 'Patient added successfully!', 'success');
                     this.reset();
+                    // Scroll to alert
+                    const alertDiv = document.getElementById('add-alert');
+                    if (alertDiv) {
+                        alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    // Optionally, focus first input
+                    const firstInput = this.querySelector('input, select, textarea');
+                    if (firstInput) firstInput.focus();
                     loadPatients();
                 } else if (response) {
                     const error = await response.json();
                     showAlert('add-alert', `Error: ${error.detail}`, 'error');
+                    const alertDiv = document.getElementById('add-alert');
+                    if (alertDiv) {
+                        alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 }
             } catch (error) {
                 console.error('Form submission error:', error);
                 showAlert('add-alert', 'Error connecting to server.', 'error');
+                const alertDiv = document.getElementById('add-alert');
+                if (alertDiv) {
+                    alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
         });
 
@@ -778,17 +798,36 @@
             document.getElementById('mainModal').style.display = 'none';
         });
 
-        // Utility: Open patient file in new tab
-        function openPatientFileInNewTab(patientId, fileId, filename) {
-            window.open(`${API_BASE}/patients/${patientId}/files/${fileId}/download?filename=${encodeURIComponent(filename)}`, '_blank');
-        }
-
-        // Utility: Show alert
-        function showAlert(elementId, message, type) {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            el.innerHTML = `<span class="${type === 'success' ? 'alert-success' : 'alert-error'}">${message}</span>`;
-            setTimeout(() => { el.innerHTML = ''; }, 3000);
+        // Utility: Open patient file in new tab (view inline)
+        async function openPatientFileInNewTab(patientId, fileId, filename) {
+            try {
+                const storedAuth = authManager.getAuth();
+                if (!storedAuth || !storedAuth.token) {
+                    showAlert('mainAlert', 'You are not authenticated. Please log in again.', 'error');
+                    window.location.href = '/static/login.html';
+                    return;
+                }
+                const url = `${API_BASE}/patients/${patientId}/files/${fileId}?filename=${encodeURIComponent(filename)}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${storedAuth.token}`
+                    }
+                });
+                if (!response.ok) {
+                    showAlert('mainAlert', 'Failed to open file. You may not have access.', 'error');
+                    return;
+                }
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+                // Optionally, revoke the blob URL after some time
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(blobUrl);
+                }, 60000); // 1 minute
+            } catch (err) {
+                showAlert('mainAlert', 'Error opening file.', 'error');
+            }
         }
 
         // Expose openPatientFileInNewTab globally for inline onclick
@@ -803,3 +842,317 @@
 
         // Expose logout globally
         window.logout = logout;
+
+        // Delete Patient Function
+        async function deletePatient(patientId) {
+            if (!confirm('Are you sure you want to delete this patient? This action cannot be undone.')) return;
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`, {
+                    method: 'DELETE'
+                });
+                if (response && response.ok) {
+                    showAlert('add-alert', 'Patient deleted successfully!', 'success');
+                    loadPatients();
+                } else if (response) {
+                    const error = await response.json();
+                    showAlert('add-alert', `Error: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                console.error('Delete patient error:', error);
+                showAlert('add-alert', 'Error connecting to server.', 'error');
+            }
+        }
+        // Expose deletePatient globally for inline onclick
+        window.deletePatient = deletePatient;
+
+        // --- Calendar with Month Switching ---
+        let calendarState = {
+            year: new Date().getFullYear(),
+            month: new Date().getMonth()
+        };
+
+        function renderCalendar() {
+            const calendarContainer = document.getElementById('calendarContainer');
+            if (!calendarContainer) return;
+            const today = new Date();
+            const { year, month } = calendarState;
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            let html = `<div class='calendar-header'>
+                <button id='prevMonthBtn' class='calendar-nav'>&lt;</button>
+                <span class='calendar-month'>${monthNames[month]} ${year}</span>
+                <button id='nextMonthBtn' class='calendar-nav'>&gt;</button>
+            </div>`;
+            html += `<table class='calendar-table'><thead><tr>`;
+            ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+                html += `<th>${d}</th>`;
+            });
+            html += `</tr></thead><tbody><tr>`;
+            for (let i = 0; i < firstDay; i++) html += '<td></td>';
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const isToday = (day === today.getDate() && month === today.getMonth() && year === today.getFullYear());
+                if ((firstDay + day - 1) % 7 === 0 && day !== 1) html += '</tr><tr>';
+                html += `<td class='calendar-day${isToday ? ' today' : ''}'>${day}</td>`;
+            }
+            html += '</tr></tbody></table>';
+            calendarContainer.innerHTML = html;
+            // Attach navigation events
+            document.getElementById('prevMonthBtn').onclick = function() {
+                calendarState.month--;
+                if (calendarState.month < 0) {
+                    calendarState.month = 11;
+                    calendarState.year--;
+                }
+                renderCalendar();
+            };
+            document.getElementById('nextMonthBtn').onclick = function() {
+                calendarState.month++;
+                if (calendarState.month > 11) {
+                    calendarState.month = 0;
+                    calendarState.year++;
+                }
+                renderCalendar();
+            };
+        }
+
+        // Show calendar section by default after login
+        window.addEventListener('load', async function() {
+            // ...existing code...
+            const isAuthenticated = await checkAuthentication();
+            if (isAuthenticated && currentUser) {
+                // ...existing code...
+                renderCalendar();
+                showSection('calendar-section');
+                // ...existing code...
+            }
+            // ...existing code...
+        });
+
+        // Edit Patient Function
+        async function editPatient(patientId) {
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`);
+                if (response && response.ok) {
+                    const patient = await response.json();
+                    // Build edit form modal
+                    const modalContent = `
+                        <form id='editPatientForm'>
+                            <div class='form-group'>
+                                <label>Patient Number</label>
+                                <input name='patient_number' value='${patient.patient_number || ''}' required />
+                            </div>
+                            <div class='form-group'>
+                                <label>First Name</label>
+                                <input name='first_name' value='${patient.first_name || ''}' required />
+                            </div>
+                            <div class='form-group'>
+                                <label>Last Name</label>
+                                <input name='last_name' value='${patient.last_name || ''}' required />
+                            </div>
+                            <div class='form-group'>
+                                <label>Session</label>
+                                <input name='session' value='${patient.session || ''}' required />
+                            </div>
+                            <div class='form-group'>
+                                <label>Phone</label>
+                                <input name='phone' value='${patient.phone || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Address</label>
+                                <input name='address' value='${patient.address || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Date of Birth</label>
+                                <input name='date_of_birth' type='date' value='${patient.date_of_birth ? patient.date_of_birth.split('T')[0] : ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>SSN</label>
+                                <input name='ssn' value='${patient.ssn || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Medicaid ID</label>
+                                <input name='medicaid_id' value='${patient.medicaid_id || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Insurance</label>
+                                <input name='insurance' value='${patient.insurance || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Insurance ID</label>
+                                <input name='insurance_id' value='${patient.insurance_id || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Referal</label>
+                                <input name='referal' value='${patient.referal || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>PSR Date</label>
+                                <input name='psr_date' type='date' value='${patient.psr_date ? patient.psr_date.split('T')[0] : ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Authorization</label>
+                                <input name='authorization' value='${patient.authorization || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Diagnosis</label>
+                                <input name='diagnosis' value='${patient.diagnosis || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Start Date</label>
+                                <input name='start_date' type='date' value='${patient.start_date ? patient.start_date.split('T')[0] : ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>End Date</label>
+                                <input name='end_date' type='date' value='${patient.end_date ? patient.end_date.split('T')[0] : ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Code 1</label>
+                                <input name='code1' value='${patient.code1 || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Code 2</label>
+                                <input name='code2' value='${patient.code2 || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Code 3</label>
+                                <input name='code3' value='${patient.code3 || ''}' />
+                            </div>
+                            <div class='form-group'>
+                                <label>Code 4</label>
+                                <input name='code4' value='${patient.code4 || ''}' />
+                            </div>
+                            <div style='margin-top:20px;'>
+                                <button class='btn' type='submit'>Save Changes</button>
+                                <button class='btn btn-danger' type='button' id='cancelEditPatientBtn' style='margin-left:15px;'>Cancel</button>
+                            </div>
+                            <div id='editPatientAlert' style='margin-top:10px;'></div>
+                        </form>`;
+                    showModal('Edit Patient', modalContent);
+                    document.getElementById('cancelEditPatientBtn').onclick = function() {
+                        document.getElementById('mainModal').style.display = 'none';
+                    };
+                    document.getElementById('editPatientForm').onsubmit = async function(e) {
+                        e.preventDefault();
+                        const formData = new FormData(this);
+                        const data = {};
+                        for (let [key, value] of formData.entries()) {
+                            data[key] = value;
+                        }
+                        try {
+                            const resp = await authenticatedFetch(`${API_BASE}/patients/${patientId}`, {
+                                method: 'PUT',
+                                body: JSON.stringify(data)
+                            });
+                            if (resp && resp.ok) {
+                                showAlert('editPatientAlert', 'Patient updated successfully!', 'success');
+                                setTimeout(() => {
+                                    document.getElementById('mainModal').style.display = 'none';
+                                    loadPatients();
+                                }, 1000);
+                            } else if (resp) {
+                                const error = await resp.json();
+                                showAlert('editPatientAlert', `Error: ${error.detail}`, 'error');
+                            }
+                        } catch (err) {
+                            showAlert('editPatientAlert', 'Error connecting to server.', 'error');
+                        }
+                    };
+                } else {
+                    showModal('Error', 'Failed to load patient data.');
+                }
+            } catch (error) {
+                showModal('Error', 'Failed to load patient data.');
+            }
+        }
+        // Expose editPatient globally for inline onclick
+        window.editPatient = editPatient;
+
+        // Open Service Form Modal
+        function openServiceForm(serviceType) {
+            document.getElementById('serviceType').value = serviceType;
+            document.getElementById('serviceEntryForm').reset();
+            document.getElementById('servicePatientSuggestions').innerHTML = '';
+            document.getElementById('serviceEntryModal').style.display = 'block';
+            document.getElementById('serviceFormTitle').textContent = `Add ${serviceType} Entry`;
+        }
+        window.openServiceForm = openServiceForm;
+
+        // Close Service Entry Modal
+        function closeServiceEntryModal() {
+            document.getElementById('serviceEntryModal').style.display = 'none';
+        }
+        window.closeServiceEntryModal = closeServiceEntryModal;
+
+        // Patient name autocomplete for service entry
+        async function searchPatientNames(query) {
+            const suggestionsDiv = document.getElementById('servicePatientSuggestions');
+            if (!query || query.length < 2) {
+                suggestionsDiv.innerHTML = '';
+                return;
+            }
+            const response = await authenticatedFetch(`${API_BASE}/patients/?q=${encodeURIComponent(query)}`);
+            if (response && response.ok) {
+                const patients = await response.json();
+                suggestionsDiv.innerHTML = patients.map(p => `<div class='autocomplete-suggestion' data-id='${p.id}' data-name='${p.first_name} ${p.last_name}'>${p.first_name} ${p.last_name} (#${p.patient_number})</div>`).join('');
+                Array.from(suggestionsDiv.children).forEach(child => {
+                    child.onclick = function() {
+                        document.getElementById('servicePatientSearch').value = this.getAttribute('data-name');
+                        document.getElementById('servicePatientSearch').setAttribute('data-id', this.getAttribute('data-id'));
+                        suggestionsDiv.innerHTML = '';
+                    };
+                });
+            } else {
+                suggestionsDiv.innerHTML = '';
+            }
+        }
+        window.searchPatientNames = searchPatientNames;
+
+        // Submit Service Entry
+        async function submitServiceEntry(e) {
+            e.preventDefault();
+            const patientNameInput = document.getElementById('servicePatientSearch');
+            const patientId = patientNameInput.getAttribute('data-id');
+            if (!patientId) {
+                alert('Please select a patient from the suggestions.');
+                return;
+            }
+            const formData = new FormData(document.getElementById('serviceEntryForm'));
+            const data = {};
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}/services`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                if (response && response.ok) {
+                    alert('Service entry added successfully!');
+                    closeServiceEntryModal();
+                } else if (response) {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to add service entry.'));
+                } else {
+                    alert('Error: Failed to add service entry.');
+                }
+            } catch (error) {
+                alert('Error: Failed to add service entry.');
+            }
+        }
+        window.submitServiceEntry = submitServiceEntry;
+
+        // Utility: Show alert (global, robust)
+        function showAlert(elementId, message, type) {
+            console.log('showAlert called:', { elementId, message, type });
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.style.display = 'block';
+            el.innerHTML = `<span class="${type === 'success' ? 'alert-success' : 'alert-error'}">${message}</span>`;
+            setTimeout(() => { el.innerHTML = ''; el.style.display = 'none'; }, 4000);
+        }
+        window.showAlert = showAlert;

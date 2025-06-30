@@ -365,6 +365,75 @@
             grid-column: 1 / -1;
         }
 
+        /* Calendar styles */
+        .calendar-header {
+            text-align: center;
+            font-size: 2.2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #444;
+        }
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.85);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            overflow: hidden;
+            font-size: 1.2em;
+        }
+        .calendar-table th, .calendar-table td {
+            width: 14.28%;
+            text-align: center;
+            padding: 22px 0;
+            font-size: 1.4em;
+            border: 1px solid #e0e0e0;
+        }
+        .calendar-table th {
+            background: #764ba2;
+            color: #fff;
+            font-weight: 500;
+        }
+        .calendar-day {
+            background: transparent;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        .calendar-day:hover {
+            background: #e0e7ff;
+        }
+        .calendar-day.today {
+            background: #667eea;
+            color: #fff;
+            border-radius: 50%;
+            font-weight: bold;
+        }
+        #calendarContainer {
+            max-width: 900px;
+            margin: 0 auto;
+            margin-top: 30px;
+        }
+
+        .calendar-nav {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            padding: 6px 16px;
+            margin: 0 10px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(118,75,162,0.12);
+            transition: background 0.2s, transform 0.1s;
+            outline: none;
+        }
+        .calendar-nav:hover, .calendar-nav:focus {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: #fff;
+            transform: scale(1.08);
+        }
+
         @media (max-width: 768px) {
             .form-row-2, .form-row-3 {
                 grid-template-columns: 1fr;
