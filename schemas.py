@@ -101,6 +101,7 @@ class Service(BaseModel):
     service_date: date
     billing_code: str
     amount_paid: float
+    sheet_type: str
     created_at: datetime
 
     class Config:
@@ -111,3 +112,4 @@ class ServiceCreate(BaseModel):
     service_date: date
     billing_code: str
     amount_paid: float
+    sheet_type: str
