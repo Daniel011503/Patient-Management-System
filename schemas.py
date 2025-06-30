@@ -99,8 +99,6 @@ class Service(BaseModel):
     patient_id: int
     service_type: str
     service_date: date
-    billing_code: str
-    amount_paid: float
     sheet_type: str
     created_at: datetime
 
@@ -110,6 +108,4 @@ class Service(BaseModel):
 class ServiceCreate(BaseModel):
     service_type: str
     service_date: date
-    billing_code: str
-    amount_paid: float
     sheet_type: str
