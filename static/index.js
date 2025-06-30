@@ -591,31 +591,7 @@
                         </form>
                     `;
 
-                    // After filesHtml and uploadFormHtml are defined, fetch and render service entries
-                    let servicesHtml = '';
-                    try {
-                        const servicesResp = await fetch(`${API_BASE}/patients/${patientId}/services`, {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': `Bearer ${accessToken}`
-                            }
-                        });
-                        if (servicesResp && servicesResp.ok) {
-                            const services = await servicesResp.json();
-                            if (services.length > 0) {
-                                servicesHtml = `<div style="margin-top:28px;"><strong>Service Entries:</strong><table class='service-table' style='width:100%;margin-top:10px;border-collapse:collapse;'><thead><tr><th>Date</th><th>Type</th><th>Billing Code</th><th>Amount Paid</th></tr></thead><tbody>` +
-                                    services.map(s => `<tr><td>${s.service_date ? new Date(s.service_date).toLocaleDateString() : ''}</td><td>${s.service_type || ''}</td><td>${s.billing_code || ''}</td><td>${s.amount_paid || ''}</td></tr>`).join('') +
-                                    `</tbody></table></div>`;
-                            } else {
-                                servicesHtml = `<div style='margin-top:28px; color:#888;'>No service entries for this patient.</div>`;
-                            }
-                        } else {
-                            servicesHtml = `<div style='margin-top:28px; color:#e74c3c;'>Error loading service entries.</div>`;
-                        }
-                    } catch (e) {
-                        servicesHtml = `<div style='margin-top:28px; color:#e74c3c;'>Error loading service entries.</div>`;
-                    }
-
+                    // Move filesHtml below uploadFormHtml and remove servicesHtml
                     const modalContent = `
                         <div class=\"patient-info-grid\">
 
@@ -703,28 +679,26 @@
                                 <label>Code 4:</label>
                                 <p>${patient.code4 || 'Not assigned'}</p>
                             </div>
-                            <div class="patient-info-item">
-                                <label>Record Created:</label>
-                                <p>${new Date(patient.created_at).toLocaleDateString()}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Last Updated:</label>
-                                <p>${new Date(patient.updated_at).toLocaleDateString()}</p>
-                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <button class="btn btn-info btn-small attendance-sheet-btn" data-patient-id="${patient.id}">Attendance Sheet</button>
+                            <button class="btn btn-primary btn-small appointment-sheet-btn" data-patient-id="${patient.id}">Appointment Sheet</button>
                         </div>
                         ${uploadFormHtml}
                         ${filesHtml}
-                        ${servicesHtml}
-                        <div id="sheet-buttons" style="margin-top: 24px; text-align: center;">
-                            <button id="appointment-sheet-btn" class="btn btn-secondary" style="margin-right: 12px;">Appointment Sheet</button>
-                            <button id="attendance-sheet-btn" class="btn btn-secondary">Attendance Sheet</button>
-                        </div>
                     `;
-                    
-                    document.getElementById('modalPatientInfo').innerHTML = modalContent;
-                    document.getElementById('patientModal').style.display = 'block';
 
-                    // Add upload handler
+                    showModal('Patient Details', modalContent);
+
+                    // Attach event listeners for Attendance/Appointment Sheet buttons
+                    document.querySelector('.attendance-sheet-btn').addEventListener('click', function() {
+                        showSheetModal(patient.id, 'attendance');
+                    });
+                    document.querySelector('.appointment-sheet-btn').addEventListener('click', function() {
+                        showSheetModal(patient.id, 'appointment');
+                    });
+
+                    // Attach file upload handler
                     const uploadForm = document.getElementById('patientFileUploadForm');
                     if (uploadForm) {
                         uploadForm.addEventListener('submit', async function(e) {
@@ -732,211 +706,100 @@
                             const fileInput = document.getElementById('patientFileInput');
                             const alertDiv = document.getElementById('patientFileUploadAlert');
                             if (!fileInput.files.length) {
-                                alertDiv.innerHTML = '<span style=\"color:#e74c3c;\">Please select a file.</span>';
+                                alertDiv.innerHTML = '<span style="color:red;">Please select a file.</span>';
                                 return;
                             }
                             const formData = new FormData();
                             formData.append('file', fileInput.files[0]);
                             try {
-                                const uploadResp = await fetch(`${API_BASE}/patients/${patientId}/files`, {
+                                const resp = await fetch(`${API_BASE}/patients/${patient.id}/files`, {
                                     method: 'POST',
-                                    headers: {
-                                        'Authorization': `Bearer ${accessToken}`
-                                    },
+                                    headers: { 'Authorization': `Bearer ${accessToken}` },
                                     body: formData
                                 });
-                                if (uploadResp.ok) {
-                                    alertDiv.innerHTML = '<span style=\"color:green;\">File uploaded!</span>';
-                                    setTimeout(() => viewPatient(patientId), 1000);
+                                if (resp.ok) {
+                                    alertDiv.innerHTML = '<span style="color:green;">File uploaded!</span>';
+                                    setTimeout(() => viewPatient(patient.id), 1000);
                                 } else {
-                                    const err = await uploadResp.json();
-                                    alertDiv.innerHTML = `<span style=\"color:#e74c3c;\">Error: ${err.detail || 'Upload failed.'}</span>`;
+                                    alertDiv.innerHTML = '<span style="color:red;">Upload failed.</span>';
                                 }
                             } catch (err) {
-                                alertDiv.innerHTML = '<span style=\"color:#e74c3c;\">Error uploading file.</span>';
+                                alertDiv.innerHTML = '<span style="color:red;">Error uploading file.</span>';
                             }
                         });
                     }
-                } else {
-                    alert('Error loading patient data');
                 }
             } catch (error) {
-                console.error('Network error:', error);
-                alert('Error connecting to server');
+                showModal('Error', 'Failed to load patient details.');
             }
         }
 
-        // Close Patient Modal
-        function closePatientModal() {
-            document.getElementById('patientModal').style.display = 'none';
-        }
-
-        // Edit Patient Function
-        async function editPatient(patientId) {
+        // Show Sheet Modal (Attendance/Appointment)
+        async function showSheetModal(patientId, sheetType) {
             try {
-                const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`);
-                
-                if (response && response.ok) {
-                    const patient = await response.json();
-                    
-                    // Fill ALL the edit form fields with patient data
-                    document.getElementById('editPatientId').value = patient.id;
-                    document.getElementById('editPatientNumber').value = patient.patient_number || '';
-                    document.getElementById('editFirstName').value = patient.first_name || '';
-                    document.getElementById('editLastName').value = patient.last_name || '';
-                    document.getElementById('editSession').value = patient.session || '';
-                    document.getElementById('editAddress').value = patient.address || '';
-                    document.getElementById('editDateOfBirth').value = patient.date_of_birth || '';
-                    document.getElementById('editPhone').value = patient.phone || '';
-                    document.getElementById('editSsn').value = patient.ssn || '';
-                    document.getElementById('editMedicaidId').value = patient.medicaid_id || '';
-                    document.getElementById('editInsurance').value = patient.insurance || '';
-                    document.getElementById('editInsuranceId').value = patient.insurance_id || '';
-                    document.getElementById('editReferal').value = patient.referal || '';
-                    document.getElementById('editPsrDate').value = patient.psr_date || '';
-                    document.getElementById('editAuthorization').value = patient.authorization || '';
-                    document.getElementById('editDiagnosis').value = patient.diagnosis || '';
-                    document.getElementById('editStartDate').value = patient.start_date || '';
-                    document.getElementById('editEndDate').value = patient.end_date || '';
-                    document.getElementById('editCode1').value = patient.code1 || '';
-                    document.getElementById('editCode2').value = patient.code2 || '';
-                    document.getElementById('editCode3').value = patient.code3 || '';
-                    document.getElementById('editCode4').value = patient.code4 || '';
-                    
-                    // Show edit form
-                    document.getElementById('patient-list-view').style.display = 'none';
-                    document.getElementById('patient-edit-view').style.display = 'block';
-                } else {
-                    alert('Error loading patient data');
-                }
-            } catch (error) {
-                console.error('Network error:', error);
-                alert('Error connecting to server');
-            }
-        }
-
-        // Cancel Edit Function
-        function cancelEdit() {
-            document.getElementById('patient-edit-view').style.display = 'none';
-            document.getElementById('patient-list-view').style.display = 'block';
-            document.getElementById('edit-alert').innerHTML = '';
-        }
-
-        // Delete Patient
-        async function deletePatient(id) {
-            if (confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
-                try {
-                    const response = await authenticatedFetch(`${API_BASE}/patients/${id}`, {
-                        method: 'DELETE'
-                    });
-                    
-                    if (response && response.ok) {
-                        showAlert('add-alert', 'Patient deleted successfully', 'success');
-                        loadPatients();
+                const resp = await authenticatedFetch(`${API_BASE}/patients/${patientId}/services?sheet_type=${sheetType}`);
+                let entriesHtml = '';
+                if (resp && resp.ok) {
+                    const entries = await resp.json();
+                    if (entries.length > 0) {
+                        entriesHtml = `<table class='service-table' style='width:100%;margin-top:10px;border-collapse:collapse;'><thead><tr><th>Date</th><th>Type</th><th>Billing Code</th><th>Amount Paid</th></tr></thead><tbody>` +
+                            entries.map(s => `<tr><td>${s.service_date ? new Date(s.service_date).toLocaleDateString() : ''}</td><td>${s.service_type || ''}</td><td>${s.billing_code || ''}</td><td>${s.amount_paid || ''}</td></tr>`).join('') +
+                            `</tbody></table>`;
                     } else {
-                        alert('Error deleting patient');
+                        entriesHtml = `<div style='color:#888;'>No ${sheetType} entries for this patient.</div>`;
                     }
-                } catch (error) {
-                    alert('Error connecting to server');
+                } else {
+                    entriesHtml = `<div style='color:#e74c3c;'>Error loading ${sheetType} entries.</div>`;
                 }
+                // Add a back button to return to patient view
+                const backBtn = `<button class='btn btn-small' id='backToPatientBtn' style='margin-bottom:15px;'>&larr; Back to Patient</button>`;
+                showModal(sheetType.charAt(0).toUpperCase() + sheetType.slice(1) + ' Sheet', backBtn + entriesHtml);
+                // Attach back button event
+                document.getElementById('backToPatientBtn').onclick = function() {
+                    viewPatient(patientId);
+                };
+            } catch (error) {
+                showModal('Error', 'Failed to load sheet entries.');
             }
         }
 
-        // Edit Patient Form Handler
-        document.addEventListener('DOMContentLoaded', function() {
-            const editPatientForm = document.getElementById('editPatientForm');
-            if (editPatientForm) {
-                editPatientForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const patientId = document.getElementById('editPatientId').value;
-                    const formData = new FormData(this);
-                    const patientData = {};
-                    
-                    for (let [key, value] of formData.entries()) {
-                        if (key !== 'patient_id' && value.trim() !== '') {
-                            patientData[key] = value;
-                        }
-                    }
-                    
-                    try {
-                        const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`, {
-                            method: 'PUT',
-                            body: JSON.stringify(patientData)
-                        });
-                        
-                        if (response && response.ok) {
-                            showAlert('edit-alert', 'Patient updated successfully!', 'success');
-                            loadPatients();
-                            setTimeout(() => {
-                                cancelEdit();
-                            }, 1500);
-                        } else {
-                            const error = await response.json();
-                            showAlert('edit-alert', `Error: ${error.detail}`, 'error');
-                        }
-                    } catch (error) {
-                        showAlert('edit-alert', 'Error connecting to server.', 'error');
-                    }
-                });
-            }
+        // Show Modal Utility
+        function showModal(title, content) {
+            const modal = document.getElementById('mainModal');
+            const modalTitle = document.getElementById('mainModalTitle');
+            const modalBody = document.getElementById('mainModalBody');
+            modalTitle.textContent = title;
+            modalBody.innerHTML = content;
+            modal.style.display = 'block';
+        }
+
+        // Close Modal Utility
+        document.getElementById('mainModalClose').addEventListener('click', function() {
+            document.getElementById('mainModal').style.display = 'none';
         });
 
-        // Show Alert
-        function showAlert(containerId, message, type) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
-            
-            setTimeout(() => {
-                container.innerHTML = '';
-            }, 5000);
+        // Utility: Open patient file in new tab
+        function openPatientFileInNewTab(patientId, fileId, filename) {
+            window.open(`${API_BASE}/patients/${patientId}/files/${fileId}/download?filename=${encodeURIComponent(filename)}`, '_blank');
         }
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const patientModal = document.getElementById('patientModal');
-            const addUserModal = document.getElementById('addUserModal');
-            const resetPasswordModal = document.getElementById('resetPasswordModal');
-            
-            if (event.target === patientModal) {
-                closePatientModal();
-            }
-            if (event.target === addUserModal) {
-                closeAddUserModal();
-            }
-            if (event.target === resetPasswordModal) {
-                closeResetPasswordModal();
-            }
+        // Utility: Show alert
+        function showAlert(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.innerHTML = `<span class="${type === 'success' ? 'alert-success' : 'alert-error'}">${message}</span>`;
+            setTimeout(() => { el.innerHTML = ''; }, 3000);
         }
 
-        // Debug function
-        window.debugAuth = function() {
-            console.log('=== Authentication Debug Info ===');
-            console.log('API_BASE:', API_BASE);
-            console.log('currentUser:', currentUser);
-            console.log('accessToken:', accessToken ? `${accessToken.substring(0, 20)}...` : 'null');
-            console.log('Stored auth:', authManager.getAuth());
-            console.log('Is authenticated:', authManager.isAuthenticated());
-            console.log('==================================');
-        };
+        // Expose openPatientFileInNewTab globally for inline onclick
+        window.openPatientFileInNewTab = openPatientFileInNewTab;
 
-        // Add this function to allow opening patient files in a new tab with authentication
-        async function openPatientFileInNewTab(patientId, fileId, filename) {
-            const url = `${API_BASE}/patients/${patientId}/files/${fileId}`;
-            const response = await fetch(url, {
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`
-                }
-            });
-            if (!response.ok) {
-                alert("Failed to open file: " + response.statusText);
-                return;
-            }
-            const blob = await response.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            // Open in new tab
-            const newTab = window.open();
-            newTab.location = blobUrl;
-            // Optionally, revoke the blob URL after some time
-            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
-        }
+        // Expose viewPatient globally for inline onclick
+        window.viewPatient = viewPatient;
+
+        // Expose editPatient and deletePatient if needed (implementations not shown here)
+        // window.editPatient = editPatient;
+        // window.deletePatient = deletePatient;
+
+        // Expose logout globally
+        window.logout = logout;

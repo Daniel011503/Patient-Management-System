@@ -63,4 +63,5 @@ class Service(Base):
     service_date = Column(Date, nullable=False)
     billing_code = Column(String, nullable=False)
     amount_paid = Column(Float, nullable=False)
+    sheet_type = Column(String, nullable=False, default="attendance")
     created_at = Column(DateTime, default=datetime.utcnow)

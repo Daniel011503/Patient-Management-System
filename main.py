@@ -500,14 +500,17 @@ def add_service_entry(
 @app.get("/patients/{patient_id}/services")
 def get_service_entries(
     patient_id: int,
+    sheet_type: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
     db_patient = crud.get_patient(db, patient_id)
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    # Assuming a relationship: db_patient.services
-    return [schemas.Service.model_validate(s) for s in getattr(db_patient, 'services', [])]
+    services = getattr(db_patient, 'services', [])
+    if sheet_type:
+        services = [s for s in services if getattr(s, 'sheet_type', None) == sheet_type]
+    return [schemas.Service.model_validate(s) for s in services]
 
 if __name__ == "__main__":
     import uvicorn

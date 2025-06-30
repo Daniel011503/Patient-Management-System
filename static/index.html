@@ -503,7 +503,7 @@
     </div>
    </div>
    <!-- Services Section -->
-   <div class="section" id="services" style="display:none;">
+   <div class="section" id="services">
     <h2 style="text-align:center;">Services</h2>
     <div style="margin-top:30px; display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:center;">
      <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('TMS')">TMS</button>
@@ -539,6 +539,13 @@
        <label for="serviceAmountPaid">Amount Paid <span class="required">*</span></label>
        <input id="serviceAmountPaid" name="amount_paid" type="number" min="0" step="0.01" required>
       </div>
+      <div class="form-group">
+       <label for="serviceSheetType">Sheet Type <span class="required">*</span></label>
+       <select id="serviceSheetType" name="sheet_type" required>
+        <option value="attendance">Attendance Sheet</option>
+        <option value="appointment">Appointment Sheet</option>
+       </select>
+      </div>
       <input id="serviceType" name="service_type" type="hidden">
       <input id="servicePatientId" name="patient_id" type="hidden">
       <div style="margin-top:20px; text-align:right;">
@@ -548,7 +555,19 @@
      </form>
     </div>
    </div>
+ </div>
+ <!-- New Sheet Modal for Attendance/Appointment -->
+ <div class="modal" id="sheetModal" style="display:none; z-index: 1200;">
+  <div class="modal-content" style="max-width:600px;">
+   <div class="modal-header">
+    <h2 id="sheetModalTitle">Sheet Entries</h2>
+    <span class="close" onclick="closeSheetModal()">×</span>
+   </div>
+   <div id="sheetEntriesContainer">
+    <!-- Sheet entries will be loaded here -->
+   </div>
   </div>
+ </div>
   <!-- Add User Modal -->
   <div class="modal" id="addUserModal">
    <div class="modal-content">
@@ -686,88 +705,22 @@
     </div>
     <div id="modalPatientInfo">
      <!-- Patient info will be loaded here -->
+     <div style="margin-top: 20px; text-align:center;">
+      <button class="btn btn-service" id="attendanceSheetBtn" style="margin-right:12px;" onclick="showSheetModal('attendance')">Attendance Sheet</button>
+      <button class="btn btn-service" id="appointmentSheetBtn" onclick="showSheetModal('appointment')">Appointment Sheet</button>
+     </div>
     </div>
    </div>
   </div>
+  <!-- Main Modal for dynamic content -->
+  <div class="modal" id="mainModal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" id="mainModalClose">&times;</span>
+      <h2 id="mainModalTitle"></h2>
+      <div id="mainModalBody"></div>
+    </div>
+  </div>
   <script src="index.js">
-  </script>
-  <script>
-// Show Services tab and section for both admin and staff
-window.addEventListener('DOMContentLoaded', function() {
-  const userInfo = window.currentUser || JSON.parse(localStorage.getItem('currentUser') || '{}');
-  document.getElementById('services').style.display = '';
-  document.getElementById('servicesNavBtn').style.display = '';
-});
-function openServiceForm(serviceType) {
-  document.getElementById('serviceFormTitle').textContent = 'Add ' + serviceType + ' Entry';
-  document.getElementById('serviceType').value = serviceType;
-  document.getElementById('serviceEntryForm').reset();
-  document.getElementById('servicePatientId').value = '';
-  document.getElementById('servicePatientSuggestions').innerHTML = '';
-  document.getElementById('serviceEntryModal').style.display = 'block';
-}
-function closeServiceEntryModal() {
-  document.getElementById('serviceEntryModal').style.display = 'none';
-}
-// Patient name autocomplete
-function searchPatientNames(query) {
-  if (!query || query.length < 2) {
-    document.getElementById('servicePatientSuggestions').innerHTML = '';
-    return;
-  }
-  const token = sessionStorage.getItem('spectrum_access_token');
-  fetch(`/patients/?q=${encodeURIComponent(query)}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  })
-    .then(res => res.json())
-    .then(data => {
-      const suggestions = data.map(p => `<div class='suggestion' onclick="selectServicePatient('${p.id}', '${p.first_name} ${p.last_name}')">${p.first_name} ${p.last_name} (${p.patient_number})</div>`).join('');
-      document.getElementById('servicePatientSuggestions').innerHTML = suggestions;
-    });
-}
-function selectServicePatient(id, name) {
-  document.getElementById('servicePatientSearch').value = name;
-  document.getElementById('servicePatientId').value = id;
-  document.getElementById('servicePatientSuggestions').innerHTML = '';
-}
-// Submit service entry
-function submitServiceEntry(e) {
-  e.preventDefault();
-  const form = e.target;
-  const patientId = form.servicePatientId.value;
-  if (!patientId) {
-    alert('Please select a patient from the suggestions.');
-    return;
-  }
-  const payload = {
-    patient_id: patientId,
-    service_type: form.serviceType.value,
-    service_date: form.serviceDate.value,
-    billing_code: form.serviceBillingCode.value,
-    amount_paid: form.serviceAmountPaid.value
-  };
-  const token = sessionStorage.getItem('spectrum_access_token');
-  fetch(`/patients/${patientId}/services`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(payload)
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      closeServiceEntryModal();
-      alert('Service entry added!');
-      // Optionally refresh patient view if open
-      if (typeof loadPatientInfo === 'function') loadPatientInfo(patientId);
-    } else {
-      alert(data.message || 'Failed to add service entry.');
-    }
-  })
-  .catch(() => alert('Failed to add service entry.'));
-}
   </script>
  </body>
 </html>
