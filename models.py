@@ -61,5 +61,6 @@ class Service(Base):
     patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False)
     service_type = Column(String, nullable=False)
     service_date = Column(Date, nullable=False)
+    service_time = Column(String, nullable=False)  # Added service_time field
     sheet_type = Column(String, nullable=False, default="attendance")
     created_at = Column(DateTime, default=datetime.utcnow)

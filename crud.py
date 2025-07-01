@@ -63,6 +63,7 @@ def add_service_entry(db: Session, patient_id: int, service: schemas.ServiceCrea
         patient_id=patient_id,
         service_type=service.service_type,
         service_date=service.service_date,
+        service_time=service.service_time,  # Added service_time
         sheet_type=service.sheet_type
     )
     db.add(db_service)

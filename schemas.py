@@ -99,6 +99,7 @@ class Service(BaseModel):
     patient_id: int
     service_type: str
     service_date: date
+    service_time: str  # Added service_time field
     sheet_type: str
     created_at: datetime
 
@@ -108,4 +109,5 @@ class Service(BaseModel):
 class ServiceCreate(BaseModel):
     service_type: str
     service_date: date
+    service_time: str  # Added service_time field
     sheet_type: str

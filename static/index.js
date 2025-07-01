@@ -754,6 +754,20 @@
             }
         }
 
+        // Helper to format 24-hour time ("HH:MM") to 12-hour AM/PM ("h:mm AM/PM")
+        function formatTime12hr(timeStr) {
+            if (!timeStr) return '';
+            console.log("Formatting time:", timeStr);
+            const [hourStr, minute] = timeStr.split(":");
+            let hour = parseInt(hourStr, 10);
+            const ampm = hour >= 12 ? "PM" : "AM";
+            hour = hour % 12;
+            if (hour === 0) hour = 12;
+            const formatted = `${hour}:${minute} ${ampm}`;
+            console.log("Formatted time:", formatted);
+            return formatted;
+        }
+
         // Show Sheet Modal (Attendance/Appointment)
         async function showSheetModal(patientId, sheetType) {
             try {
@@ -761,9 +775,22 @@
                 let entriesHtml = '';
                 if (resp && resp.ok) {
                     const entries = await resp.json();
+                    console.log("Sheet entries:", entries); // Debug log to check entries
                     if (entries.length > 0) {
-                        entriesHtml = `<table class='service-table' style='width:100%;margin-top:10px;border-collapse:collapse;'><thead><tr><th>Date</th><th>Type</th><th>Billing Code</th><th>Amount Paid</th></tr></thead><tbody>` +
-                            entries.map(s => `<tr><td>${s.service_date ? new Date(s.service_date).toLocaleDateString() : ''}</td><td>${s.service_type || ''}</td><td>${s.billing_code || ''}</td><td>${s.amount_paid || ''}</td></tr>`).join('') +
+                        entriesHtml = `<table class='service-table' style='width:100%;margin-top:10px;border-collapse:collapse;'>
+                            <thead>
+                                <tr>
+                                    <th style="width:33%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Date</th>
+                                    <th style="width:33%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Time</th>
+                                    <th style="width:33%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>` +
+                            entries.map(s => `<tr>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.service_date ? new Date(s.service_date).toLocaleDateString() : ''}</td>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${formatTime12hr(s.service_time) || 'N/A'}</td>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.service_type || ''}</td>
+                            </tr>`).join('') +
                             `</tbody></table>`;
                     } else {
                         entriesHtml = `<div style='color:#888;'>No ${sheetType} entries for this patient.</div>`;
@@ -773,9 +800,19 @@
                 }
                 // Add a back button to return to patient view
                 const backBtn = `<button class='btn btn-small' id='backToPatientBtn' style='margin-bottom:15px;'>&larr; Back to Patient</button>`;
-                showModal(sheetType.charAt(0).toUpperCase() + sheetType.slice(1) + ' Sheet', backBtn + entriesHtml);
+                
+                // Use the dedicated sheet modal instead of the main modal
+                const sheetModal = document.getElementById('sheetModal');
+                const sheetModalTitle = document.getElementById('sheetModalTitle');
+                const sheetEntriesContainer = document.getElementById('sheetEntriesContainer');
+                
+                sheetModalTitle.textContent = sheetType.charAt(0).toUpperCase() + sheetType.slice(1) + ' Sheet';
+                sheetEntriesContainer.innerHTML = backBtn + entriesHtml;
+                sheetModal.style.display = 'block';
+                
                 // Attach back button event
                 document.getElementById('backToPatientBtn').onclick = function() {
+                    closeSheetModal();
                     viewPatient(patientId);
                 };
             } catch (error) {
@@ -797,6 +834,12 @@
         document.getElementById('mainModalClose').addEventListener('click', function() {
             document.getElementById('mainModal').style.display = 'none';
         });
+
+        // Function to close sheet modal
+        function closeSheetModal() {
+            document.getElementById('sheetModal').style.display = 'none';
+        }
+        window.closeSheetModal = closeSheetModal;
 
         // Utility: Open patient file in new tab (view inline)
         async function openPatientFileInNewTab(patientId, fileId, filename) {
@@ -1156,3 +1199,6 @@
             setTimeout(() => { el.innerHTML = ''; el.style.display = 'none'; }, 4000);
         }
         window.showAlert = showAlert;
+
+        // Expose showSheetModal globally for inline onclick
+        window.showSheetModal = showSheetModal;
