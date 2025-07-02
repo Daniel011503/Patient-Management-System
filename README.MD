@@ -5,7 +5,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-3-lightgrey.svg)](https://sqlite.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-A comprehensive, full-stack web application designed for managing patient records in mental health facilities. Built with modern web technologies and HIPAA compliance considerations.
+A comprehensive, full-stack web application designed for managing patient appointments and records in mental health facilities. Built with modern web technologies and featuring an intuitive calendar system with recurring appointment scheduling.
 
 ## 📋 Table of Contents
 - [Features](#-features)
@@ -26,45 +26,128 @@ A comprehensive, full-stack web application designed for managing patient record
 ## ✨ Features
 
 ### 🎯 Core Functionality
+- **Interactive Calendar**: Visual appointment tracking with date selection
+- **Service Type Management**: Standardized service types (PSR, TMS, Individual Therapy, Evaluations)
+- **Time-Based Scheduling**: 12-hour AM/PM time selection in 15-minute increments
+- **Recurring Appointments**: Weekly or monthly recurring appointment scheduling
+- **Attendance Tracking**: Record and visualize patient attendance
 - **Patient Registration**: Comprehensive intake form with validation
 - **Patient Log Management**: Clean overview with search capabilities
-- **Complete Patient Profiles**: View all patient information including sensitive data
-- **Real-time Search**: Instant filtering across patient records
-- **CRUD Operations**: Full Create, Read, Update, Delete functionality
-- **Data Validation**: Server-side and client-side input validation
+- **Service Sheets**: Dedicated attendance and appointment sheets for each patient
+- **Real-time Updates**: UI updates immediately after changes without page reload
+- **Multi-User Support**: User management with role-based access control
+
+### 📅 Calendar & Appointment Features
+- **Visual Indicators**: Color-coded appointment status on calendar
+- **Attendance Status**: Track attended, missed, or pending appointments
+- **Recurring Appointment Support**: Configure appointments to repeat weekly/monthly
+- **Weekday-Only Scheduling**: Option to exclude weekends for recurring appointments
+- **Date-Based Service Entry**: Add services by clicking directly on calendar dates
+- **Quick View**: See all appointments for a selected date
+- **Attendance Management**: Update attendance status directly from calendar view
 
 ### 🔒 Security & Compliance
-- **HIPAA Considerations**: Secure handling of Protected Health Information (PHI)
-- **Input Sanitization**: Protection against injection attacks
-- **Data Validation**: Comprehensive validation using Pydantic schemas
-- **Audit Trail**: Automatic tracking of record creation and updates
+- **User Authentication**: JWT-based secure authentication system
+- **Role-Based Access**: Control what different users can view or modify
+- **Input Validation**: Server-side and client-side input validation
+- **Secure API**: Protected endpoints requiring authentication
+- **Automatic Port Selection**: Finds available port if default is in use
 
 ### 💻 User Experience
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Modern UI**: Clean, professional interface with smooth animations
-- **Modal Popups**: Non-intrusive viewing of detailed patient information
-- **Form Auto-save**: Prevents data loss during form completion
-- **Loading States**: Clear feedback during data operations
+- **Modern UI**: Clean, professional interface with intuitive navigation
+- **Modal System**: Non-intrusive information display and form entry
+- **Alert System**: Customizable alerts that appear above modals
+- **Search Capabilities**: Instant filtering across patient records
+- **Dynamic Form Population**: Auto-selection based on dates and service types
+
+## ✨ Key Features Spotlight
+
+### 🗓️ Interactive Calendar System
+```
+┌─────────────────────────────────────┐
+│           July 2025                 │
+├───┬───┬───┬───┬───┬───┬───┐         │
+│Sun│Mon│Tue│Wed│Thu│Fri│Sat│         │
+├───┼───┼───┼───┼───┼───┼───┤         │
+│   │ 1 │ 2*│ 3 │ 4*│ 5 │ 6 │  Legend:│
+├───┼───┼───┼───┼───┼───┼───┤  * = has appointments │
+│ 7 │ 8*│ 9*│10 │11*│12 │13 │  ✓ = attended         │
+├───┼───┼───┼───┼───┼───┼───┤  ✗ = no-show          │
+│14 │15 │16*│17*│18 │19 │20 │  ⟳ = recurring        │
+├───┼───┼───┼───┼───┼───┼───┤         │
+│21 │22*│23 │24*│25*│26 │27 │         │
+├───┼───┼───┼───┼───┼───┼───┤         │
+│28 │29 │30*│31 │   │   │   │         │
+└───┴───┴───┴───┴───┴───┴───┘         │
+```
+
+The calendar provides a clear visual overview of all appointments, with color-coded indicators showing appointment status and special markers for recurring appointments. Click any date to view or add services.
+
+### ⏰ Time-Based Appointment Scheduling
+
+Appointments can be scheduled with precise 15-minute increments from 9:00 AM to 5:00 PM using a user-friendly dropdown interface. The system automatically displays times in 12-hour format while storing them in 24-hour format for consistency.
+
+### 🔄 Recurring Appointment Management
+
+Easily set up recurring appointments with flexible options:
+- **Weekly Recurrence**: Select specific days of the week (Monday-Friday)
+- **Monthly Recurrence**: Same day each month for a specified number of months
+- **Duration Control**: Set the number of weeks/months for the recurring series
+- **Weekend Exclusion**: Automatically skips weekend days when scheduling
+
+### ✅ Attendance Tracking
+
+Track patient attendance with a simple dropdown selection:
+- **Attended**: Mark appointments as successfully completed
+- **No Show**: Record when patients miss their appointments
+- **Not Marked**: Default state for upcoming appointments
+
+Calendar days are color-coded based on attendance status, making it easy to identify patterns at a glance.
+
+### 📋 Standardized Service Types
+
+Consistent service categorization using standardized types:
+- **PSR**: Psychosocial Rehabilitation services
+- **TMS**: Transcranial Magnetic Stimulation therapy
+- **Individual Therapy**: One-on-one counseling sessions
+- **Evaluations**: Assessment and diagnostic services
+
+### 🔔 Enhanced Alert System
+
+A robust alert system ensures important notifications are always visible:
+- **Global Visibility**: Alerts appear above modals and other UI elements
+- **Auto-Dismiss**: Success messages automatically disappear after 5 seconds
+- **Custom Styling**: Clear visual differentiation between success, error, and info alerts
+- **Close Button**: Manual dismissal option for all alerts
 
 ## 🛠 Technology Stack
 
 ### Backend
-- **[FastAPI](https://fastapi.tiangolo.com/)**: Modern, fast web framework for building APIs
-- **[SQLAlchemy](https://www.sqlalchemy.org/)**: SQL toolkit and Object-Relational Mapping (ORM)
-- **[Pydantic](https://pydantic-docs.helpmanual.io/)**: Data validation using Python type hints
-- **[SQLite](https://sqlite.org/)**: Lightweight, serverless database engine
-- **[Uvicorn](https://www.uvicorn.org/)**: Lightning-fast ASGI server
+- **[FastAPI](https://fastapi.tiangolo.com/)**: Modern, high-performance API framework with automatic OpenAPI documentation
+- **[SQLAlchemy](https://www.sqlalchemy.org/)**: SQL toolkit and Object-Relational Mapping (ORM) for database operations
+- **[Pydantic](https://pydantic-docs.helpmanual.io/)**: Data validation and settings management using Python type annotations
+- **[SQLite](https://sqlite.org/)**: Lightweight, embedded database for portable deployment
+- **[Uvicorn](https://www.uvicorn.org/)**: Lightning-fast ASGI server for running the application
+- **[JWT Authentication](https://jwt.io/)**: JSON Web Token based authentication system
+- **[CORS Middleware](https://fastapi.tiangolo.com/tutorial/cors/)**: Cross-Origin Resource Sharing support
 
 ### Frontend
-- **HTML5**: Semantic markup with accessibility considerations
-- **CSS3**: Modern styling with Grid, Flexbox, and CSS animations
-- **Vanilla JavaScript**: ES6+ features without framework dependencies
-- **Fetch API**: Modern approach to HTTP requests
+- **Interactive Calendar**: Custom-built calendar system with visual indicators
+- **Modal System**: Flexible modal framework for forms and information display
+- **Alert System**: Global alert management with z-index priority handling
+- **Responsive Design**: Adapts to different screen sizes and devices
+- **Dynamic Form Controls**: Context-aware input fields with proper validation
+- **Vanilla JavaScript**: Clean ES6+ code without framework dependencies
+- **Fetch API**: Modern AJAX requests with async/await pattern
+- **CSS Grid & Flexbox**: Advanced layout techniques for complex UI components
+- **CSS Animations**: Smooth transitions and visual feedback
 
 ### Development Tools
 - **Python 3.8+**: Modern Python with type hints
 - **Virtual Environment**: Isolated dependency management
 - **Git**: Version control and collaboration
+- **Dynamic Port Allocation**: Automatic detection of available ports
 
 ## 🏗 Architecture
 
@@ -99,14 +182,18 @@ graph TB
 ### Prerequisites
 - Python 3.8 or higher
 - Modern web browser (Chrome, Firefox, Safari, Edge)
-- Git (for cloning the repository)
+- Git (optional, for cloning the repository)
 
 ### Quick Start
 
-1. **Clone the repository**
+1. **Get the code**
    ```bash
-   git clone https://github.com/yourusername/patient-management-system.git
-   cd patient-management-system
+   # Option 1: Clone with Git
+   git clone https://github.com/yourusername/spectrum-mental-health.git
+   cd spectrum-mental-health
+   
+   # Option 2: Download and extract the ZIP file
+   # Extract to a location of your choice and open a terminal in that directory
    ```
 
 2. **Create and activate virtual environment**
@@ -125,19 +212,56 @@ graph TB
    pip install -r requirements.txt
    ```
 
-4. **Initialize the database**
+4. **Run the application**
    ```bash
-   # The database will be created automatically on first run
    python main.py
    ```
+   The system will automatically:
+   - Create the database if it doesn't exist
+   - Create a default admin user
+   - Find an available port (starting from 8000)
+   - Display access URLs in the console
 
 5. **Access the application**
-   - **Backend API**: http://localhost:8000
-   - **Frontend**: Open `index.html` in your browser
+   - The console will show available URLs (typically http://localhost:8000/)
+   - **Login**: http://localhost:8000/static/login.html
+   - **Main App**: http://localhost:8000/static/index.html (after login)
    - **API Documentation**: http://localhost:8000/docs (Interactive Swagger UI)
-   - **Alternative Docs**: http://localhost:8000/redoc
+   - **Health Check**: http://localhost:8000/health
+
+6. **Default login credentials**
+   ```
+   Username: admin
+   Password: password
+   ```
+   (Change the password immediately after first login)
 
 ## 📖 Usage
+
+### Calendar & Appointment Management
+
+1. **Navigate to the "Calendar" tab** (default view)
+   - See a monthly calendar with visual indicators for days with appointments
+   - Color indicators show attendance status and recurring appointments
+   
+2. **Working with the Calendar**
+   - Click on any date to see all services/appointments for that day
+   - Use the date modal to view, add, or update appointments
+   - Track attendance status with a dropdown selection
+   - Navigate between months using the arrow buttons
+
+3. **Adding Service Entries**
+   - Click any date on the calendar to add services for that date
+   - Select from standardized service types: PSR, TMS, Individual Therapy, Evaluations
+   - Choose appointment time from the 15-minute interval dropdown (9:00 AM - 5:00 PM)
+   - Mark attendance status as needed
+
+4. **Setting Up Recurring Appointments**
+   - Check "Make this a recurring appointment" when adding a service
+   - Choose weekly or monthly recurrence pattern
+   - For weekly: select specific weekdays (Monday-Friday only)
+   - For monthly: appointments repeat on the same day each month
+   - Set the duration (number of weeks/months) for the recurring series
 
 ### Adding New Patients
 
