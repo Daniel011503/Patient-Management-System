@@ -189,7 +189,7 @@ graph TB
 1. **Get the code**
    ```bash
    # Option 1: Clone with Git
-   git clone https://github.com/yourusername/spectrum-mental-health.git
+   git clone https://github.com/Daniel011503/spectrum-mental-health.git
    cd spectrum-mental-health
    
    # Option 2: Download and extract the ZIP file
