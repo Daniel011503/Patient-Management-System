@@ -940,7 +940,9 @@
                 const date = new Date(year, month, day);
                 const isToday = (day === today.getDate() && month === today.getMonth() && year === today.getFullYear());
                 if ((firstDay + day - 1) % 7 === 0 && day !== 1) html += '</tr><tr>';
-                html += `<td class='calendar-day${isToday ? ' today' : ''}'>${day}</td>`;
+                // Make the day clickable
+                const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                html += `<td class='calendar-day${isToday ? ' today' : ''}' data-date='${formattedDate}' onclick='showServicesByDate("${formattedDate}")'>${day}</td>`;
             }
             html += '</tr></tbody></table>';
             calendarContainer.innerHTML = html;
@@ -1189,16 +1191,164 @@
         }
         window.submitServiceEntry = submitServiceEntry;
 
-        // Utility: Show alert (global, robust)
-        function showAlert(elementId, message, type) {
-            console.log('showAlert called:', { elementId, message, type });
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            el.style.display = 'block';
-            el.innerHTML = `<span class="${type === 'success' ? 'alert-success' : 'alert-error'}">${message}</span>`;
-            setTimeout(() => { el.innerHTML = ''; el.style.display = 'none'; }, 4000);
+        // Function to show services for a specific date
+        async function showServicesByDate(dateStr) {
+            // Display loading modal first
+            showModal('Loading...', '<div style="text-align:center;padding:20px;"><div class="spinner"></div><p style="margin-top:15px;">Loading services for this date...</p></div>');
+            
+            try {
+                // Fetch all patients
+                const response = await authenticatedFetch(`${API_BASE}/patients/`);
+                if (!response.ok) {
+                    showAlert('mainAlert', 'Failed to load patients', 'error');
+                    return;
+                }
+                
+                const patients = await response.json();
+                let allServices = [];
+                
+                // Fetch services for each patient
+                const fetchPromises = patients.map(async patient => {
+                    try {
+                        const servicesResp = await authenticatedFetch(`${API_BASE}/patients/${patient.id}/services`);
+                        if (servicesResp.ok) {
+                            const services = await servicesResp.json();
+                            // Filter services for the selected date
+                            const servicesForDate = services.filter(s => s.service_date === dateStr);
+                            // Add patient info to each service
+                            servicesForDate.forEach(s => {
+                                s.patient_name = `${patient.first_name} ${patient.last_name}`;
+                                s.patient_id = patient.id;
+                                s.patient_number = patient.patient_number;
+                            });
+                            return servicesForDate;
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching services for patient ${patient.id}:`, err);
+                    }
+                    return [];
+                });
+                
+                // Wait for all patient service fetches to complete
+                const servicesArrays = await Promise.all(fetchPromises);
+                allServices = servicesArrays.flat();
+                
+                // Format the date for display
+                const displayDate = new Date(dateStr).toLocaleDateString(undefined, {
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric'
+                });
+                
+                // Create HTML for services list
+                let servicesHtml = '';
+                if (allServices.length > 0) {
+                    servicesHtml = `<h3>Services on ${displayDate}</h3>
+                        <table class='service-table' style='width:100%;margin-top:10px;border-collapse:collapse;'>
+                            <thead>
+                                <tr>
+                                    <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Patient</th>
+                                    <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Time</th>
+                                    <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Type</th>
+                                    <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Sheet</th>
+                                    <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${allServices.map(s => `
+                                    <tr>
+                                        <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.patient_name} (#${s.patient_number})</td>
+                                        <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${formatTime12hr(s.service_time) || 'N/A'}</td>
+                                        <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.service_type || ''}</td>
+                                        <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.sheet_type || ''}</td>
+                                        <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">
+                                            <button class="btn btn-small" onclick="viewPatient(${s.patient_id})">View Patient</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>`;
+                } else {
+                    servicesHtml = `<h3>No Services on ${displayDate}</h3>
+                        <p>No service entries were found for this date.</p>`;
+                }
+                
+                // Add button to create a new service entry
+                const addButtonHtml = `
+                    <div style="margin-top:15px;">
+                        <button class="btn" onclick="openServiceFormWithDate('${dateStr}')">
+                            Add Service Entry for ${displayDate}
+                        </button>
+                    </div>`;
+                
+                showModal(`Services for ${displayDate}`, servicesHtml + addButtonHtml);
+                
+            } catch (error) {
+                console.error('Error fetching services by date:', error);
+                showAlert('mainAlert', 'Error loading services', 'error');
+            }
         }
-        window.showAlert = showAlert;
+        
+        // Function to open service form with pre-filled date
+        function openServiceFormWithDate(dateStr) {
+            // First set the date in the form
+            const serviceDate = document.getElementById('serviceDate');
+            if (serviceDate) {
+                serviceDate.value = dateStr;
+            }
+            // Then open the service form modal
+            openServiceForm('Service');
+        }
+        
+        // Make these functions available globally
+        window.showServicesByDate = showServicesByDate;
+        window.openServiceFormWithDate = openServiceFormWithDate;
 
-        // Expose showSheetModal globally for inline onclick
-        window.showSheetModal = showSheetModal;
+        // Function to highlight dates with service entries
+        async function highlightDatesWithServices() {
+            try {
+                // Get current month and year from calendarState
+                const { year, month } = calendarState;
+                const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+                const lastDay = new Date(year, month + 1, 0).getDate();
+                const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                
+                // Get all patients
+                const response = await authenticatedFetch(`${API_BASE}/patients/`);
+                if (!response.ok) return;
+                
+                const patients = await response.json();
+                const datesWithServices = new Set();
+                
+                // For each patient, check services in current month
+                for (const patient of patients) {
+                    const servicesResp = await authenticatedFetch(`${API_BASE}/patients/${patient.id}/services`);
+                    if (servicesResp.ok) {
+                        const services = await servicesResp.json();
+                        services.forEach(service => {
+                            if (service.service_date >= startDate && service.service_date <= endDate) {
+                                datesWithServices.add(service.service_date);
+                            }
+                        });
+                    }
+                }
+                
+                // Highlight days with services
+                document.querySelectorAll('.calendar-day').forEach(day => {
+                    const dateStr = day.getAttribute('data-date');
+                    if (dateStr && datesWithServices.has(dateStr)) {
+                        day.classList.add('has-services');
+                    }
+                });
+            } catch (err) {
+                console.error('Error highlighting dates with services:', err);
+            }
+        }
+        
+        // Modify the renderCalendar function to also highlight dates with services
+        const originalRenderCalendar = renderCalendar;
+        renderCalendar = function() {
+            originalRenderCalendar();
+            highlightDatesWithServices();
+        };

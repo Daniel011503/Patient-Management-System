@@ -434,6 +434,39 @@
             transform: scale(1.08);
         }
 
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border-left-color: #667eea;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Calendar day with services */
+        .calendar-day.has-services {
+            position: relative;
+        }
+        
+        .calendar-day.has-services::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background-color: #764ba2;
+            border-radius: 50%;
+        }
+
         @media (max-width: 768px) {
             .form-row-2, .form-row-3 {
                 grid-template-columns: 1fr;
