@@ -242,7 +242,10 @@
                 loadPatients();
             } else if (sectionId === 'user-management') {
                 loadUsers();
-            } 
+            } else if (sectionId === 'calendar-section') {
+                // Refresh the calendar to show updated appointments
+                renderCalendar();
+            }
         }
 
         // USER MANAGEMENT FUNCTIONS
@@ -473,24 +476,40 @@
                     patientData[key] = value;
                 }
             }
+            
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.innerHTML = 'Adding Patient...';
+            submitBtn.disabled = true;
+            
             try {
                 const response = await authenticatedFetch(`${API_BASE}/patients/`, {
                     method: 'POST',
                     body: JSON.stringify(patientData)
                 });
+                
                 if (response && response.ok) {
                     const result = await response.json();
-                    showAlert('add-alert', 'Patient added successfully!', 'success');
+                    
+                    // Clear the form
                     this.reset();
+                    
+                    // Show success message
+                    showAlert('add-alert', 'Patient added successfully!', 'success');
+                    
                     // Scroll to alert
                     const alertDiv = document.getElementById('add-alert');
                     if (alertDiv) {
                         alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
-                    // Optionally, focus first input
+                    
+                    // Focus on first input
                     const firstInput = this.querySelector('input, select, textarea');
                     if (firstInput) firstInput.focus();
-                    loadPatients();
+                    
+                    // Update patient list
+                    await loadPatients();
                 } else if (response) {
                     const error = await response.json();
                     showAlert('add-alert', `Error: ${error.detail}`, 'error');
@@ -506,6 +525,10 @@
                 if (alertDiv) {
                     alertDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
+            } finally {
+                // Reset button state
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
             }
         });
 
@@ -559,6 +582,7 @@
         // Search Patients
         document.getElementById('searchBox').addEventListener('input', function(e) {
             const query = e.target.value.toLowerCase();
+            // Use the current allPatients array (which will be updated after deletion)
             const filteredPatients = allPatients.filter(patient => 
                 patient.patient_number.toLowerCase().includes(query) ||
                 patient.first_name.toLowerCase().includes(query) ||
@@ -780,16 +804,32 @@
                         entriesHtml = `<table class='service-table' style='width:100%;margin-top:10px;border-collapse:collapse;'>
                             <thead>
                                 <tr>
-                                    <th style="width:33%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Date</th>
-                                    <th style="width:33%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Time</th>
-                                    <th style="width:33%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Type</th>
+                                    <th style="width:25%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Date</th>
+                                    <th style="width:25%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Time</th>
+                                    <th style="width:25%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Type</th>
+                                    <th style="width:25%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Attendance</th>
                                 </tr>
                             </thead>
                             <tbody>` +
-                            entries.map(s => `<tr>
-                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.service_date ? new Date(s.service_date).toLocaleDateString() : ''}</td>
+                            entries.map(s => `<tr ${s.is_recurring || s.parent_service_id ? 'class="recurring-row"' : ''}>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">
+                                    ${s.service_date ? new Date(s.service_date).toLocaleDateString() : ''}
+                                    ${s.is_recurring ? '<span title="Series parent" style="margin-left:5px;color:#5555AA;font-weight:bold;">⟳</span>' : ''}
+                                    ${s.parent_service_id ? '<span title="Part of recurring series" style="margin-left:5px;color:#5555AA;">⟳</span>' : ''}
+                                </td>
                                 <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${formatTime12hr(s.service_time) || 'N/A'}</td>
                                 <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.service_type || ''}</td>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">
+                                    <select 
+                                        class="attendance-select" 
+                                        data-service-id="${s.id}" 
+                                        style="padding:4px; border-radius:4px; border: 1px solid #ccc;"
+                                        onchange="updateAttendance(${s.id}, this.value)">
+                                        <option value="">Not Marked</option>
+                                        <option value="true" ${s.attended === true ? 'selected' : ''}>Attended</option>
+                                        <option value="false" ${s.attended === false ? 'selected' : ''}>No Show</option>
+                                    </select>
+                                </td>
                             </tr>`).join('') +
                             `</tbody></table>`;
                     } else {
@@ -828,6 +868,16 @@
             modalTitle.textContent = title;
             modalBody.innerHTML = content;
             modal.style.display = 'block';
+            
+            // Ensure modal has the right z-index (below alerts)
+            modal.style.zIndex = '2000';
+            
+            // Make sure the mainAlert container is moved to be a direct child of body
+            // This ensures it's not affected by stacking contexts
+            const mainAlert = document.getElementById('mainAlert');
+            if (mainAlert && mainAlert.parentElement !== document.body) {
+                document.body.appendChild(mainAlert);
+            }
         }
 
         // Close Modal Utility
@@ -879,7 +929,7 @@
         // Expose viewPatient globally for inline onclick
         window.viewPatient = viewPatient;
 
-        // Expose editPatient and deletePatient if needed (implementations not shown here)
+        // Expose editPatient and deletePatient if needed
         // window.editPatient = editPatient;
         // window.deletePatient = deletePatient;
 
@@ -894,8 +944,18 @@
                     method: 'DELETE'
                 });
                 if (response && response.ok) {
+                    // Remove the patient from the allPatients array in memory
+                    allPatients = allPatients.filter(patient => patient.id !== patientId);
+                    
+                    // Update the display with the filtered array
+                    displayPatients(allPatients);
+                    
                     showAlert('add-alert', 'Patient deleted successfully!', 'success');
-                    loadPatients();
+                    
+                    // Update the calendar if it's visible
+                    if (calendarState && calendarState.currentDate) {
+                        refreshCalendarView();
+                    }
                 } else if (response) {
                     const error = await response.json();
                     showAlert('add-alert', `Error: ${error.detail}`, 'error');
@@ -914,7 +974,49 @@
             month: new Date().getMonth()
         };
 
-        function renderCalendar() {
+        // Function to fetch all services for a month
+        async function fetchServicesForMonth(year, month) {
+            try {
+                // Fetch all patients
+                const response = await authenticatedFetch(`${API_BASE}/patients/`);
+                if (!response.ok) {
+                    console.error('Failed to load patients');
+                    return {};
+                }
+                
+                const patients = await response.json();
+                let servicesByDate = {};
+                
+                // Fetch services for each patient
+                const fetchPromises = patients.map(async patient => {
+                    try {
+                        const servicesResp = await authenticatedFetch(`${API_BASE}/patients/${patient.id}/services`);
+                        if (servicesResp.ok) {
+                            const services = await servicesResp.json();
+                            
+                            // Group services by date
+                            services.forEach(service => {
+                                if (!servicesByDate[service.service_date]) {
+                                    servicesByDate[service.service_date] = [];
+                                }
+                                servicesByDate[service.service_date].push(service);
+                            });
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching services for patient ${patient.id}:`, err);
+                    }
+                });
+                
+                // Wait for all patient service fetches to complete
+                await Promise.all(fetchPromises);
+                return servicesByDate;
+            } catch (err) {
+                console.error('Error fetching services for month:', err);
+                return {};
+            }
+        }
+
+        async function renderCalendar() {
             const calendarContainer = document.getElementById('calendarContainer');
             if (!calendarContainer) return;
             const today = new Date();
@@ -925,6 +1027,10 @@
             ];
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Fetch services for the current month
+            const servicesByDate = await fetchServicesForMonth(year, month);
+            
             let html = `<div class='calendar-header'>
                 <button id='prevMonthBtn' class='calendar-nav'>&lt;</button>
                 <span class='calendar-month'>${monthNames[month]} ${year}</span>
@@ -942,7 +1048,31 @@
                 if ((firstDay + day - 1) % 7 === 0 && day !== 1) html += '</tr><tr>';
                 // Make the day clickable
                 const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                html += `<td class='calendar-day${isToday ? ' today' : ''}' data-date='${formattedDate}' onclick='showServicesByDate("${formattedDate}")'>${day}</td>`;
+                
+                // Check if this date has services
+                const hasServices = servicesByDate[formattedDate] && servicesByDate[formattedDate].length > 0;
+                
+                // Add classes for visual indicators
+                let dayClasses = 'calendar-day';
+                if (isToday) dayClasses += ' today';
+                if (hasServices) dayClasses += ' has-services';
+                
+                // Also add data about services for this day to be used for hover information
+                let titleText = '';
+                if (hasServices) {
+                    const services = servicesByDate[formattedDate];
+                    const total = services.length;
+                    const attended = services.filter(s => s.attended === true).length;
+                    const noShow = services.filter(s => s.attended === false).length;
+                    const hasRecurring = services.some(s => s.is_recurring);
+                    
+                    titleText = `Services: ${total}, Attended: ${attended}, No-show: ${noShow}`;
+                    if (hasRecurring) {
+                        titleText += " (includes recurring appointments)";
+                    }
+                }
+                
+                html += `<td class='${dayClasses}' data-date='${formattedDate}' onclick='showServicesByDate("${formattedDate}")' ${titleText ? `title="${titleText}"` : ''}>${day}</td>`;
             }
             html += '</tr></tbody></table>';
             calendarContainer.innerHTML = html;
@@ -978,6 +1108,22 @@
             // ...existing code...
         });
 
+        // Function to refresh calendar view when appointments change
+        function refreshCalendarView() {
+            console.log("Refreshing calendar view");
+            renderCalendar();
+        }
+        
+        // Expose refreshCalendarView globally
+        window.refreshCalendarView = refreshCalendarView;
+        
+        // Function to refresh calendar view when needed
+        function refreshCalendarView() {
+            if (calendarState && calendarState.currentDate) {
+                renderCalendar();
+            }
+        }
+        
         // Edit Patient Function
         async function editPatient(patientId) {
             try {
@@ -1119,8 +1265,21 @@
 
         // Open Service Form Modal
         function openServiceForm(serviceType) {
-            document.getElementById('serviceType').value = serviceType;
+            // First reset the form to clear any previous values
             document.getElementById('serviceEntryForm').reset();
+            
+            // Then set the service type in the dropdown
+            const serviceTypeSelect = document.getElementById('serviceTypeSelect');
+            if (serviceTypeSelect) {
+                // Find the option that matches the serviceType parameter
+                for (let i = 0; i < serviceTypeSelect.options.length; i++) {
+                    if (serviceTypeSelect.options[i].value === serviceType) {
+                        serviceTypeSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            
             document.getElementById('servicePatientSuggestions').innerHTML = '';
             document.getElementById('serviceEntryModal').style.display = 'block';
             document.getElementById('serviceFormTitle').textContent = `Add ${serviceType} Entry`;
@@ -1159,34 +1318,134 @@
 
         // Submit Service Entry
         async function submitServiceEntry(e) {
+            // Make sure mainAlert is properly positioned for visibility above all modals
+            document.getElementById('mainAlert').style.zIndex = '9999';
             e.preventDefault();
             const patientNameInput = document.getElementById('servicePatientSearch');
             const patientId = patientNameInput.getAttribute('data-id');
             if (!patientId) {
-                alert('Please select a patient from the suggestions.');
+                showAlert('mainAlert', 'Please select a patient from the suggestions.', 'warning');
                 return;
             }
+            
+            // Build service data from form
             const formData = new FormData(document.getElementById('serviceEntryForm'));
             const data = {};
+            
+            // Process form data and handle checkbox correctly
             for (let [key, value] of formData.entries()) {
-                data[key] = value;
-            }
-            try {
-                const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}/services`, {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-                if (response && response.ok) {
-                    alert('Service entry added successfully!');
-                    closeServiceEntryModal();
-                } else if (response) {
-                    const error = await response.json();
-                    alert('Error: ' + (error.detail || 'Failed to add service entry.'));
+                // Handle the attended checkbox - convert to boolean
+                if (key === 'attended') {
+                    data[key] = value === 'true';
                 } else {
-                    alert('Error: Failed to add service entry.');
+                    data[key] = value;
+                }
+            }
+            
+            // If attended checkbox wasn't checked, it won't be in the formData
+            // So we need to check if it exists, and if not, set it to null
+            if (!formData.has('attended')) {
+                data.attended = null;
+            }
+            
+            // Check if this is a recurring appointment
+            const isRecurring = document.getElementById('isRecurring').checked;
+            
+            try {
+                if (isRecurring) {
+                    // Get recurring options
+                    const recurringType = document.querySelector('input[name="recurring_type"]:checked').value;
+                    
+                    let recurringDays = [];
+                    let weeksCount = 0;
+                    let monthsCount = 0;
+                    
+                    if (recurringType === 'weekly') {
+                        // Get selected days for weekly recurrence
+                        document.querySelectorAll('.day-checkbox:checked').forEach(checkbox => {
+                            recurringDays.push(parseInt(checkbox.value));
+                        });
+                        
+                        if (recurringDays.length === 0) {
+                            showAlert('mainAlert', 'Please select at least one day of the week for recurring appointments.', 'warning');
+                            return;
+                        }
+                        
+                        weeksCount = parseInt(document.getElementById('weeksCount').value);
+                    } else {
+                        // For monthly, just get the count
+                        monthsCount = parseInt(document.getElementById('monthsCount').value);
+                    }
+                    
+                    // Add recurring data to the request
+                    const recurringData = {
+                        ...data,
+                        recurring_type: recurringType,
+                        recurring_days: recurringDays,
+                        weeks_count: weeksCount,
+                        months_count: monthsCount
+                    };
+                    
+                    // Send to recurring service endpoint
+                    const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}/recurring-services`, {
+                        method: 'POST',
+                        body: JSON.stringify(recurringData)
+                    });
+                    
+                    if (response && response.ok) {
+                        const result = await response.json();
+                        closeServiceEntryModal();
+                        
+                        // Use custom alert instead of browser alert
+                        showAlert('mainAlert', `Service entry added successfully with ${result.recurring_appointments_count} recurring appointments!`, 'success');
+                        
+                        // Always refresh calendar data regardless of which tab is active
+                        renderCalendar();
+                        
+                        // Show additional message if not on calendar tab
+                        if (!document.getElementById('calendar-section').classList.contains('active')) {
+                            setTimeout(() => {
+                                showAlert('mainAlert', 'The calendar has been updated with your recurring appointments.', 'info');
+                            }, 3000);
+                        }
+                    } else if (response) {
+                        const error = await response.json();
+                        showAlert('mainAlert', 'Error: ' + (error.detail || 'Failed to add recurring service entries.'), 'error');
+                    } else {
+                        showAlert('mainAlert', 'Error: Failed to add recurring service entries.', 'error');
+                    }
+                } else {
+                    // Regular non-recurring service
+                    const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}/services`, {
+                        method: 'POST',
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (response && response.ok) {
+                        closeServiceEntryModal();
+                        
+                        // Use custom alert instead of browser alert
+                        showAlert('mainAlert', 'Service entry added successfully!', 'success');
+                        
+                        // Always refresh calendar data regardless of which tab is active
+                        renderCalendar();
+                        
+                        // Show additional message if not on calendar tab
+                        if (!document.getElementById('calendar-section').classList.contains('active')) {
+                            setTimeout(() => {
+                                showAlert('mainAlert', 'The calendar has been updated with your new appointment.', 'info');
+                            }, 3000);
+                        }
+                    } else if (response) {
+                        const error = await response.json();
+                        showAlert('mainAlert', 'Error: ' + (error.detail || 'Failed to add service entry.'), 'error');
+                    } else {
+                        showAlert('mainAlert', 'Error: Failed to add service entry.', 'error');
+                    }
                 }
             } catch (error) {
-                alert('Error: Failed to add service entry.');
+                console.error('Error submitting service entry:', error);
+                showAlert('mainAlert', 'Error: Failed to add service entry.', 'error');
             }
         }
         window.submitServiceEntry = submitServiceEntry;
@@ -1252,16 +1511,32 @@
                                     <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Time</th>
                                     <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Type</th>
                                     <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Sheet</th>
+                                    <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Attendance</th>
                                     <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${allServices.map(s => `
-                                    <tr>
-                                        <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.patient_name} (#${s.patient_number})</td>
+                                    <tr ${s.is_recurring || s.parent_service_id ? 'class="recurring-row"' : ''}>
+                                        <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">
+                                            ${s.patient_name} (#${s.patient_number})
+                                            ${s.is_recurring ? '<span title="Series parent" style="margin-left:5px;color:#5555AA;font-weight:bold;">⟳</span>' : ''}
+                                            ${s.parent_service_id ? '<span title="Part of recurring series" style="margin-left:5px;color:#5555AA;">⟳</span>' : ''}
+                                        </td>
                                         <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${formatTime12hr(s.service_time) || 'N/A'}</td>
                                         <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.service_type || ''}</td>
                                         <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.sheet_type || ''}</td>
+                                        <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">
+                                            <select 
+                                                class="attendance-select" 
+                                                data-service-id="${s.id}" 
+                                                style="padding:4px; border-radius:4px; border: 1px solid #ccc;"
+                                                onchange="updateAttendance(${s.id}, this.value)">
+                                                <option value="">Not Marked</option>
+                                                <option value="true" ${s.attended === true ? 'selected' : ''}>Attended</option>
+                                                <option value="false" ${s.attended === false ? 'selected' : ''}>No Show</option>
+                                            </select>
+                                        </td>
                                         <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">
                                             <button class="btn btn-small" onclick="viewPatient(${s.patient_id})">View Patient</button>
                                         </td>
@@ -1296,18 +1571,80 @@
             const serviceDate = document.getElementById('serviceDate');
             if (serviceDate) {
                 serviceDate.value = dateStr;
+                
+                // Trigger the change event to auto-select the day of week
+                const event = new Event('change');
+                serviceDate.dispatchEvent(event);
             }
-            // Then open the service form modal
-            openServiceForm('Service');
+            
+            // Ensure the mainAlert is ready for any alerts from the service form
+            const mainAlert = document.getElementById('mainAlert');
+            if (mainAlert) {
+                // Move to body if not already there
+                if (mainAlert.parentElement !== document.body) {
+                    document.body.appendChild(mainAlert);
+                }
+                mainAlert.style.zIndex = '9999';
+            }
+            
+            // Then open the service form modal with a default service type
+            openServiceForm('Individual Therapy');
         }
         
         // Make these functions available globally
         window.showServicesByDate = showServicesByDate;
         window.openServiceFormWithDate = openServiceFormWithDate;
+        
+        // Function to update attendance status
+        async function updateAttendance(serviceId, attendedValue) {
+            try {
+                // Convert string value to boolean or null
+                let attended = null;
+                if (attendedValue === "true") attended = true;
+                if (attendedValue === "false") attended = false;
+                
+                const response = await authenticatedFetch(`${API_BASE}/services/${serviceId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ attended: attended })
+                });
+                
+                if (response && response.ok) {
+                    const result = await response.json();
+                    console.log('Attendance updated successfully', result);
+                    // Highlight the updated row briefly to provide visual feedback
+                    const select = document.querySelector(`select[data-service-id="${serviceId}"]`);
+                    if (select) {
+                        const row = select.closest('tr');
+                        if (row) {
+                            row.style.transition = 'background-color 1s';
+                            row.style.backgroundColor = '#d4edda';
+                            setTimeout(() => {
+                                row.style.backgroundColor = '';
+                            }, 2000);
+                        }
+                    }
+                } else {
+                    console.error('Failed to update attendance status');
+                    showAlert('mainAlert', 'Failed to update attendance status', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating attendance:', error);
+                showAlert('mainAlert', 'Error updating attendance', 'error');
+            }
+        }
+        // Expose updateAttendance globally
+        window.updateAttendance = updateAttendance;
 
         // Function to highlight dates with service entries
         async function highlightDatesWithServices() {
+            console.log("Highlighting dates with services");
             try {
+                // Clear existing highlights first
+                document.querySelectorAll('.calendar-day').forEach(day => {
+                    day.classList.remove('has-services', 'has-attended', 'has-noshow', 'has-mixed', 'has-recurring');
+                    day.title = '';
+                });
+                
                 // Get current month and year from calendarState
                 const { year, month } = calendarState;
                 const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
@@ -1319,26 +1656,86 @@
                 if (!response.ok) return;
                 
                 const patients = await response.json();
-                const datesWithServices = new Set();
+                console.log(`Processing ${patients.length} patients for calendar appointments`);
+                
+                // Track services and attendance by date
+                const datesWithServices = new Map(); // Map from date to {total, attended, noshow, hasRecurring}
                 
                 // For each patient, check services in current month
-                for (const patient of patients) {
-                    const servicesResp = await authenticatedFetch(`${API_BASE}/patients/${patient.id}/services`);
-                    if (servicesResp.ok) {
-                        const services = await servicesResp.json();
-                        services.forEach(service => {
-                            if (service.service_date >= startDate && service.service_date <= endDate) {
-                                datesWithServices.add(service.service_date);
-                            }
-                        });
+                const patientPromises = patients.map(async patient => {
+                    try {
+                        const servicesResp = await authenticatedFetch(`${API_BASE}/patients/${patient.id}/services`);
+                        if (servicesResp.ok) {
+                            const services = await servicesResp.json();
+                            services.forEach(service => {
+                                if (service.service_date >= startDate && service.service_date <= endDate) {
+                                    // Initialize or update the attendance counts for this date
+                                    if (!datesWithServices.has(service.service_date)) {
+                                        datesWithServices.set(service.service_date, {
+                                            total: 0,
+                                            attended: 0,
+                                            noshow: 0,
+                                            hasRecurring: false
+                                        });
+                                    }
+                                    
+                                    const dateStats = datesWithServices.get(service.service_date);
+                                    dateStats.total++;
+                                    
+                                    if (service.attended === true) {
+                                        dateStats.attended++;
+                                    } else if (service.attended === false) {
+                                        dateStats.noshow++;
+                                    }
+                                    
+                                    // Mark if this is a recurring appointment
+                                    if (service.is_recurring || service.parent_service_id) {
+                                        dateStats.hasRecurring = true;
+                                    }
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.error(`Error getting services for patient ${patient.id}`, err);
                     }
-                }
+                });
                 
-                // Highlight days with services
+                // Wait for all patient service requests to complete
+                await Promise.all(patientPromises);
+                console.log(`Found appointments on ${datesWithServices.size} dates this month`);
+                
+                // Highlight days with services based on attendance
                 document.querySelectorAll('.calendar-day').forEach(day => {
                     const dateStr = day.getAttribute('data-date');
                     if (dateStr && datesWithServices.has(dateStr)) {
+                        const stats = datesWithServices.get(dateStr);
+                        
+                        // Remove any existing status classes
+                        day.classList.remove('has-attended', 'has-noshow', 'has-mixed', 'has-recurring');
+                        
+                        // Always add has-services class for the dot indicator
                         day.classList.add('has-services');
+                        
+                        // Add appropriate class based on attendance stats
+                        if (stats.attended > 0 && stats.noshow === 0) {
+                            day.classList.add('has-attended');
+                        } else if (stats.noshow > 0 && stats.attended === 0) {
+                            day.classList.add('has-noshow');
+                        } else if (stats.attended > 0 && stats.noshow > 0) {
+                            day.classList.add('has-mixed');
+                        }
+                        
+                        // Add recurring indicator if needed
+                        if (stats.hasRecurring) {
+                            day.classList.add('has-recurring');
+                        }
+                        
+                        // Add title attribute to show attendance stats on hover
+                        let titleText = `Total: ${stats.total}, Attended: ${stats.attended}, No-show: ${stats.noshow}`;
+                        if (stats.hasRecurring) {
+                            titleText += " (includes recurring appointments)";
+                        }
+                        day.title = titleText;
                     }
                 });
             } catch (err) {
@@ -1351,4 +1748,215 @@
         renderCalendar = function() {
             originalRenderCalendar();
             highlightDatesWithServices();
+        };
+
+        // Initialize recurring appointment UI interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle recurring checkbox
+            const isRecurringCheckbox = document.getElementById('isRecurring');
+            if (isRecurringCheckbox) {
+                isRecurringCheckbox.addEventListener('change', function() {
+                    document.getElementById('recurringOptions').style.display = 
+                        this.checked ? 'block' : 'none';
+                });
+            }
+            
+            // Handle recurring type radio buttons
+            const recurWeekly = document.getElementById('recurWeekly');
+            const recurMonthly = document.getElementById('recurMonthly');
+            if (recurWeekly && recurMonthly) {
+                recurWeekly.addEventListener('change', function() {
+                    document.getElementById('weeklyOptions').style.display = 'block';
+                    document.getElementById('monthlyOptions').style.display = 'none';
+                });
+                
+                recurMonthly.addEventListener('change', function() {
+                    document.getElementById('weeklyOptions').style.display = 'none';
+                    document.getElementById('monthlyOptions').style.display = 'block';
+                });
+            }
+            
+            // Auto-check the day of week that matches the selected date
+            const serviceDate = document.getElementById('serviceDate');
+            if (serviceDate) {
+                serviceDate.addEventListener('change', function() {
+                    if (!this.value) return;
+                    
+                    const date = new Date(this.value);
+                    const dayOfWeek = date.getDay();  // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+                    
+                    // Map Sunday (0) to 6 and shift others to align with our 0-based Monday start
+                    const dayValue = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    
+                    // Clear previous selections if this is a weekday
+                    if (dayValue < 5) {
+                        const dayCheckboxId = [
+                            'dayMon', 'dayTue', 'dayWed', 'dayThu', 'dayFri'
+                        ][dayValue];
+                        
+                        const checkbox = document.getElementById(dayCheckboxId);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    }
+                });
+            }
+        });
+
+        // --- Recurring Appointments ---
+        // Function to load recurring appointments for a patient
+        async function loadRecurringAppointments(patientId) {
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}/recurring-services`);
+                let html = '';
+                
+                if (response && response.ok) {
+                    const appointments = await response.json();
+                    
+                    if (appointments.length > 0) {
+                        html = `<table class='service-table' style='width:100%;margin-top:10px;border-collapse:collapse;'>
+                            <thead>
+                                <tr>
+                                    <th style="width:25%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Next Date</th>
+                                    <th style="width:25%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Time</th>
+                                    <th style="width:25%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Type</th>
+                                    <th style="width:25%;padding:8px;text-align:left;border-bottom:1px solid #ddd;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>` +
+                            appointments.map(a => `<tr>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${new Date(a.next_date).toLocaleDateString()}</td>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${formatTime12hr(a.service_time) || 'N/A'}</td>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${a.service_type || ''}</td>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">
+                                    ${a.attended === null ? 'Not Marked' : a.attended ? 'Attended' : 'No Show'}
+                                </td>
+                            </tr>`).join('') +
+                            `</tbody></table>`;
+                    } else {
+                        html = `<div style='color:#888;'>No recurring appointments for this patient.</div>`;
+                    }
+                } else {
+                    html = `<div style='color:#e74c3c;'>Error loading recurring appointments.</div>`;
+                }
+                
+                // Show in a modal or dedicated section
+                showModal('Recurring Appointments', html);
+            } catch (error) {
+                console.error('Error loading recurring appointments:', error);
+                showModal('Error', 'Failed to load recurring appointments.');
+            }
+        }
+        // Expose loadRecurringAppointments globally if needed
+        window.loadRecurringAppointments = loadRecurringAppointments;
+
+        // Utility function to show alerts/notifications
+        function showAlert(elementId, message, type = 'info') {
+            // Always use mainAlert for consistency when showing from modals
+            const alertElement = document.getElementById(elementId === 'add-alert' && document.getElementById('mainModal').style.display === 'block' ? 'mainAlert' : elementId);
+            
+            if (!alertElement) {
+                console.error(`Alert element with ID '${elementId}' not found`);
+                return;
+            }
+            
+            // Ensure the alert is a direct child of body for proper stacking
+            if (alertElement.parentElement !== document.body) {
+                document.body.appendChild(alertElement);
+            }
+            
+            // Set classes and message
+            alertElement.className = `alert alert-${type === 'error' ? 'danger' : type}`;
+            alertElement.innerHTML = `
+                <div class="alert-content">
+                    <span>${message}</span>
+                    <button type="button" class="close-alert" onclick="this.parentElement.parentElement.style.display='none';">&times;</button>
+                </div>
+            `;
+            
+            // Ensure highest z-index
+            alertElement.style.zIndex = '9999';
+            
+            // Show the alert
+            alertElement.style.display = 'block';
+            
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    if (alertElement) alertElement.style.display = 'none';
+                }, 5000);
+            }
+            
+            // Log for debugging
+            console.log(`Alert shown with ID: ${elementId}, Message: ${message}, Type: ${type}`);
+        }
+
+        // Authentication check
+        async function checkAuthentication() {
+            console.log('🔐 Checking authentication status...');
+            
+            const storedAuth = authManager.getAuth();
+            if (!storedAuth) {
+                console.log('❌ No valid stored authentication');
+                return false;
+            }
+
+            console.log('🔑 Found stored authentication, verifying with server...');
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${storedAuth.token}`
+                    }
+                });
+                
+                console.log('📡 Auth verification response status:', response.status);
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    currentUser = user;
+                    console.log('✅ Authentication verified:', user);
+                    return true;
+                } else {
+                    console.log('❌ Authentication verification failed');
+                    authManager.clearAuth();
+                    return false;
+                }
+            } catch (error) {
+                console.error('🚨 Authentication check error:', error);
+                return false;
+            }
+        }
+
+        // Function to ensure alerts are visible even when calendar modal is open
+        function ensureAlertVisibility() {
+            // Make sure all modals have consistent z-index values
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (modal.id !== 'mainModal') {
+                    modal.style.zIndex = '1200';
+                }
+            });
+            
+            // Ensure alert is always at the highest z-index
+            const mainAlert = document.getElementById('mainAlert');
+            if (mainAlert) {
+                // Move to body if not already there
+                if (mainAlert.parentElement !== document.body) {
+                    document.body.appendChild(mainAlert);
+                }
+                mainAlert.style.zIndex = '9999';
+            }
+        }
+        
+        // Call this function when the page loads
+        window.addEventListener('load', ensureAlertVisibility);
+        
+        // Also call it before showing any modal
+        const originalShowModal = showModal;
+        showModal = function(title, content) {
+            ensureAlertVisibility();
+            originalShowModal(title, content);
         };

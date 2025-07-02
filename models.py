@@ -63,4 +63,9 @@ class Service(Base):
     service_date = Column(Date, nullable=False)
     service_time = Column(String, nullable=False)  # Added service_time field
     sheet_type = Column(String, nullable=False, default="attendance")
+    attended = Column(Boolean, default=None, nullable=True)  # Track if patient attended the appointment
+    is_recurring = Column(Boolean, default=False)  # Flag for recurring appointments
+    recurring_pattern = Column(String, nullable=True)  # JSON string: days of week, e.g., "[1,3,5]" for Mon,Wed,Fri
+    recurring_end_date = Column(Date, nullable=True)  # End date for recurring series
+    parent_service_id = Column(Integer, ForeignKey("services.id", ondelete="SET NULL"), nullable=True)  # Parent service for recurring series
     created_at = Column(DateTime, default=datetime.utcnow)

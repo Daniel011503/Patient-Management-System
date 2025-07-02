@@ -251,6 +251,38 @@
             border-radius: 10px;
             margin-bottom: 20px;
             font-weight: 600;
+            display: none; /* Hidden by default */
+            animation: fadeIn 0.3s;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999; /* Highest z-index to ensure it's always on top */
+            max-width: 90%;
+            width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            /* Add pointer events to make sure alerts are clickable */
+            pointer-events: auto;
+        }
+
+        .alert-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-alert {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            opacity: 0.7;
+            margin-left: 15px;
+        }
+        
+        .close-alert:hover {
+            opacity: 1;
         }
 
         .alert-success {
@@ -259,10 +291,27 @@
             border: 1px solid #c3e6cb;
         }
 
-        .alert-error {
+        .alert-danger {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .loading {
@@ -453,6 +502,9 @@
         /* Calendar day with services */
         .calendar-day.has-services {
             position: relative;
+            box-shadow: inset 0 0 0 2px #ff5722;
+            border-radius: 8px;
+            font-weight: bold;
         }
         
         .calendar-day.has-services::after {
@@ -461,10 +513,112 @@
             bottom: 5px;
             left: 50%;
             transform: translateX(-50%);
-            width: 6px;
-            height: 6px;
-            background-color: #764ba2;
+            width: 8px;
+            height: 8px;
+            background-color: #ff5722;
             border-radius: 50%;
+            box-shadow: 0 0 4px rgba(255, 87, 34, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: translateX(-50%) scale(1.2);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Attendance styles */
+        .attendance-select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+        }
+        
+        .attendance-select option[value="true"] {
+            background-color: #d4edda;
+        }
+        
+        .attendance-select option[value="false"] {
+            background-color: #f8d7da;
+        }
+        
+        /* Calendar day styling with attendance indicators */
+        .calendar-day.has-attended {
+            background: linear-gradient(135deg, #E6F7E1 0%, #C3E6CB 100%);
+            font-weight: bold;
+        }
+        
+        .calendar-day.has-noshow {
+            background: linear-gradient(135deg, #F8D7DA 0%, #EAACB0 100%);
+            font-weight: bold;
+        }
+        
+        .calendar-day.has-mixed {
+            background: linear-gradient(135deg, #FFF3CD 0%, #FFEEBA 100%);
+            font-weight: bold;
+        }
+
+        /* Recurring appointments styles */
+        #recurringOptions {
+            transition: all 0.3s ease;
+        }
+        
+        .day-checkbox:checked + label {
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        /* Style for recurring appointments in calendar */
+        .calendar-day.has-recurring {
+            background: linear-gradient(135deg, #EAEAFF 0%, #D4D4FF 100%);
+            position: relative;
+        }
+        
+        .calendar-day.has-recurring::after {
+            content: "⟳";
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 9px;
+            color: #5555AA;
+        }
+
+        /* Recurring service row styling */
+        tr.recurring-row {
+            background-color: rgba(212, 212, 255, 0.2);
+        }
+        
+        tr.recurring-row:hover {
+            background-color: rgba(212, 212, 255, 0.4);
+        }
+
+        /* Make sure the dot indicator is visible even with attendance background colors */
+        .calendar-day.has-attended::after,
+        .calendar-day.has-noshow::after,
+        .calendar-day.has-mixed::after,
+        .calendar-day.has-recurring::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background-color: #ff5722;
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(255, 87, 34, 0.6);
+            animation: pulse 1.5s infinite;
+            z-index: 2; /* Ensure it's above the background */
         }
 
         @media (max-width: 768px) {

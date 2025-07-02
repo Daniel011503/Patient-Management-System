@@ -101,6 +101,11 @@ class Service(BaseModel):
     service_date: date
     service_time: str  # Added service_time field
     sheet_type: str
+    attended: Optional[bool] = None  # Added attended field
+    is_recurring: Optional[bool] = False
+    recurring_pattern: Optional[str] = None
+    recurring_end_date: Optional[date] = None
+    parent_service_id: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -111,3 +116,8 @@ class ServiceCreate(BaseModel):
     service_date: date
     service_time: str  # Added service_time field
     sheet_type: str
+    attended: Optional[bool] = None  # Added attended field
+    is_recurring: Optional[bool] = False
+    recurring_pattern: Optional[str] = None
+    recurring_end_date: Optional[date] = None
+    parent_service_id: Optional[int] = None

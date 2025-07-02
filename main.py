@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, extract
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import models
 import schemas
 import crud
@@ -22,6 +22,7 @@ from typing import List
 import shutil
 import uuid
 import calendar
+import json
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -514,13 +515,111 @@ def get_service_entries(
         services = [s for s in services if getattr(s, 'sheet_type', None) == sheet_type]
     return [schemas.Service.model_validate(s) for s in services]
 
+@app.put("/services/{service_id}")
+def update_service_entry(
+    service_id: int,
+    service_update: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    db_service = crud.update_service_entry(db, service_id=service_id, service_update=service_update)
+    if db_service is None:
+        raise HTTPException(status_code=404, detail="Service entry not found")
+    return {"success": True, "service": schemas.Service.model_validate(db_service)}
+
+@app.post("/patients/{patient_id}/recurring-services")
+def add_recurring_service_entry(
+    patient_id: int,
+    service_data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Create a recurring service entry with auto-generated appointments"""
+    # Validate patient exists
+    db_patient = crud.get_patient(db, patient_id)
+    if not db_patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    try:
+        # Extract recurring fields from service_data
+        recurring_type = service_data.pop("recurring_type", None)
+        recurring_days = service_data.pop("recurring_days", [])
+        weeks_count = service_data.pop("weeks_count", 0)
+        months_count = service_data.pop("months_count", 0)
+        
+        # Create the parent service
+        service = schemas.ServiceCreate(**service_data)
+        service.is_recurring = True
+        service.recurring_pattern = json.dumps(recurring_days)
+        
+        # Set recurring_end_date based on recurrence type
+        if recurring_type == "weekly" and weeks_count > 0:
+            end_date = service.service_date + timedelta(days=(weeks_count * 7))
+            service.recurring_end_date = end_date
+        elif recurring_type == "monthly" and months_count > 0:
+            # Approximate end date - not exact due to varying month lengths
+            service_date = service.service_date
+            year = service_date.year + ((service_date.month - 1 + months_count) // 12)
+            month = ((service_date.month - 1 + months_count) % 12) + 1
+            day = min(service_date.day, calendar.monthrange(year, month)[1])
+            service.recurring_end_date = date(year, month, day)
+        
+        # Create parent service
+        db_service = crud.add_service_entry(db, patient_id=patient_id, service=service)
+        
+        # Create all recurring instances
+        created_ids = crud.create_recurring_appointments(
+            db=db, 
+            parent_service=db_service,
+            recurring_type=recurring_type,
+            recurring_days=recurring_days,
+            weeks_count=weeks_count,
+            months_count=months_count
+        )
+        
+        return {
+            "success": True, 
+            "parent_service": schemas.Service.model_validate(db_service),
+            "recurring_appointments_count": len(created_ids)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating recurring appointments: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error creating recurring appointments: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
+    import socket
+    
+    # Try to find an available port starting from 8000
+    port = 8000
+    max_port = 8020  # Try up to port 8020
+    available_port = None
+    
+    while port <= max_port:
+        try:
+            # Test if port is available
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('', port))
+                available_port = port
+                break
+        except OSError:
+            print(f"Port {port} is in use, trying next port...")
+            port += 1
+    
+    if available_port is None:
+        print(f"❌ Could not find an available port between 8000 and {max_port}")
+        print("Please manually stop the process using these ports and try again")
+        exit(1)
+    
     print("🏥 Starting Spectrum Mental Health - Multi-User Support with Financial Tracking")
     print("=" * 70)
     print("🔧 Multiple users, same access level")
     print("💰 Financial tracking enabled")
-    print("🌐 Go to: http://localhost:8000/")
+    print(f"🌐 Go to: http://localhost:{available_port}/")
     print("📋 Everyone can manage users, patients, and finances")
     print("=" * 70)
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=available_port)

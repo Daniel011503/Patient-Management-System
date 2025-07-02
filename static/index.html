@@ -21,6 +21,11 @@
      <!-- User info will be displayed here -->
     </div>
    </div>
+   
+   <!-- Main alert container for app-wide notifications -->
+   <div id="mainAlert" class="alert" role="alert" style="display:none;">
+     <!-- Alert content will be injected by JavaScript -->
+   </div>
    <div class="nav">
     <button class="nav-btn active" onclick="showSection('calendar-section')">
      Calendar
@@ -60,7 +65,8 @@
      </strong>
      All patient information is confidential and protected under HIPAA regulations. Access is restricted to authorized personnel only.
     </div>
-    <div id="add-alert">
+    <div id="add-alert" class="alert" role="alert" style="display:none;">
+        <!-- Alert content will be injected by JavaScript -->
     </div>
     <form id="patientForm">
      <div class="form-row-2">
@@ -587,7 +593,98 @@
         <option value="appointment">Appointment Sheet</option>
        </select>
       </div>
-      <input id="serviceType" name="service_type" type="hidden">
+      <div class="form-group">
+       <input type="checkbox" id="serviceAttended" name="attended" value="true" style="margin-right: 10px; width: auto;">
+       <label for="serviceAttended">Patient Attended</label>
+      </div>
+      
+      <!-- Recurring appointment options -->
+      <div class="form-group">
+       <div style="margin-bottom: 10px;">
+        <input type="checkbox" id="isRecurring" style="margin-right: 10px; width: auto;">
+        <label for="isRecurring"><strong>Make this a recurring appointment</strong></label>
+       </div>
+       <div id="recurringOptions" style="display: none; padding: 15px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #eee;">
+        <div style="margin-bottom: 15px;">
+         <label style="display: block; margin-bottom: 8px;"><strong>Recurring Type:</strong></label>
+         <div>
+          <input type="radio" name="recurring_type" id="recurWeekly" value="weekly" checked style="margin-right: 8px; width: auto;">
+          <label for="recurWeekly" style="display: inline; margin-right: 15px;">Weekly</label>
+          <input type="radio" name="recurring_type" id="recurMonthly" value="monthly" style="margin-right: 8px; width: auto;">
+          <label for="recurMonthly" style="display: inline;">Monthly</label>
+         </div>
+        </div>
+        
+        <!-- Weekly options -->
+        <div id="weeklyOptions">
+         <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 8px;"><strong>Repeat on:</strong> (Monday-Friday only)</label>
+          <div>
+           <input type="checkbox" id="dayMon" class="day-checkbox" value="0" style="margin-right: 5px; width: auto;">
+           <label for="dayMon" style="display: inline; margin-right: 10px;">Monday</label>
+           
+           <input type="checkbox" id="dayTue" class="day-checkbox" value="1" style="margin-right: 5px; width: auto;">
+           <label for="dayTue" style="display: inline; margin-right: 10px;">Tuesday</label>
+           
+           <input type="checkbox" id="dayWed" class="day-checkbox" value="2" style="margin-right: 5px; width: auto;">
+           <label for="dayWed" style="display: inline; margin-right: 10px;">Wednesday</label>
+           
+           <input type="checkbox" id="dayThu" class="day-checkbox" value="3" style="margin-right: 5px; width: auto;">
+           <label for="dayThu" style="display: inline; margin-right: 10px;">Thursday</label>
+           
+           <input type="checkbox" id="dayFri" class="day-checkbox" value="4" style="margin-right: 5px; width: auto;">
+           <label for="dayFri" style="display: inline;">Friday</label>
+          </div>
+         </div>
+         
+         <div style="margin-bottom: 15px;">
+          <label for="weeksCount"><strong>Number of weeks:</strong></label>
+          <select id="weeksCount" style="width: 100px;">
+           <option value="1">1 week</option>
+           <option value="2">2 weeks</option>
+           <option value="3">3 weeks</option>
+           <option value="4" selected>4 weeks</option>
+           <option value="6">6 weeks</option>
+           <option value="8">8 weeks</option>
+           <option value="12">12 weeks</option>
+          </select>
+         </div>
+        </div>
+        
+        <!-- Monthly options -->
+        <div id="monthlyOptions" style="display: none;">
+         <div style="margin-bottom: 15px;">
+          <label><strong>Repeats on the same day of each month</strong></label>
+         </div>
+         
+         <div style="margin-bottom: 15px;">
+          <label for="monthsCount"><strong>Number of months:</strong></label>
+          <select id="monthsCount" style="width: 100px;">
+           <option value="1">1 month</option>
+           <option value="2">2 months</option>
+           <option value="3" selected>3 months</option>
+           <option value="4">4 months</option>
+           <option value="6">6 months</option>
+           <option value="12">12 months</option>
+          </select>
+         </div>
+        </div>
+        
+        <div style="color: #666; font-style: italic; margin-top: 10px; font-size: 90%;">
+         Note: Weekend appointments will be excluded
+        </div>
+       </div>
+      </div>
+      
+      <div class="form-group">
+       <label for="serviceTypeSelect">Service Type <span class="required">*</span></label>
+       <select id="serviceTypeSelect" name="service_type" required>
+         <option value="PSR">PSR</option>
+         <option value="TMS">TMS</option>
+         <option value="Individual Therapy">Individual Therapy</option>
+         <option value="Evaluations">Evaluations</option>
+       </select>
+      </div>
       <input id="servicePatientId" name="patient_id" type="hidden">
       <div style="margin-top:20px; text-align:right;">
        <button class="btn" type="submit">Add Service</button>
@@ -753,7 +850,7 @@
    </div>
   </div>
   <!-- Main Modal for dynamic content -->
-  <div class="modal" id="mainModal" style="display:none;">
+  <div class="modal" id="mainModal" style="display:none; z-index:2000;">
     <div class="modal-content">
       <span class="close" id="mainModalClose">&times;</span>
       <h2 id="mainModalTitle"></h2>
