@@ -30,6 +30,7 @@ class Patient(Base):
     code2 = Column(String)
     code3 = Column(String)
     code4 = Column(String)
+    notes = Column(Text)  # Added notes field for patient information
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     services = relationship(

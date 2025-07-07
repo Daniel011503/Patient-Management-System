@@ -25,6 +25,7 @@ class PatientBase(BaseModel):
     code2: Optional[str] = None
     code3: Optional[str] = None
     code4: Optional[str] = None
+    notes: Optional[str] = None  # Added notes field
 
 class PatientCreate(PatientBase):
     pass

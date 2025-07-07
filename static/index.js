@@ -726,6 +726,20 @@
                                 <label>Code 4:</label>
                                 <p>${patient.code4 || 'Not assigned'}</p>
                             </div>
+                            <div class="patient-info-item patient-info-full">
+                                <label>Notes:</label>
+                                <div class="notes-section">
+                                    <textarea 
+                                        id="patientNotes" 
+                                        class="notes-textarea" 
+                                        rows="4" 
+                                        placeholder="Enter notes about this patient..."
+                                    >${patient.notes || ''}</textarea>
+                                    <button class="btn btn-small btn-primary" id="saveNotesBtn" onclick="savePatientNotes(${patient.id})">
+                                        Save Notes
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div style="margin-top: 20px;">
                             <button class="btn btn-info btn-small attendance-sheet-btn" data-patient-id="${patient.id}">Attendance Sheet</button>
@@ -1312,6 +1326,10 @@
                                 <label>Code 4</label>
                                 <input name='code4' value='${patient.code4 || ''}' />
                             </div>
+                            <div class='form-group'>
+                                <label>Notes</label>
+                                <textarea name='notes' rows='3' placeholder='Enter any additional notes about this patient...'>${patient.notes || ''}</textarea>
+                            </div>
                             <div style='margin-top:20px;'>
                                 <button class='btn' type='submit'>Save Changes</button>
                                 <button class='btn btn-danger' type='button' id='cancelEditPatientBtn' style='margin-left:15px;'>Cancel</button>
@@ -1883,7 +1901,7 @@
                     data = await response.json();
                     if (!Array.isArray(data)) {
                         data = [];
-                    }
+                                       }
                 } else {
                     console.log('Appointments endpoint returned:', response.status);
                 }
@@ -1951,6 +1969,50 @@
 
             container.innerHTML = html;
         }
+
+        // Function to save patient notes
+        async function savePatientNotes(patientId) {
+            try {
+                const notesTextarea = document.getElementById('patientNotes');
+                const notes = notesTextarea.value.trim();
+                
+                // Show loading state
+                const saveBtn = document.getElementById('saveNotesBtn');
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = 'Saving...';
+                saveBtn.disabled = true;
+                
+                const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ notes: notes })
+                });
+                
+                if (response && response.ok) {
+                    showAlert('Notes saved successfully!', 'success');
+                    
+                    // Update the patient in the allPatients array
+                    const patientIndex = allPatients.findIndex(p => p.id === patientId);
+                    if (patientIndex !== -1) {
+                        allPatients[patientIndex].notes = notes;
+                    }
+                } else if (response) {
+                    const error = await response.json();
+                    showAlert(`Error saving notes: ${error.detail}`, 'danger');
+                }
+                
+            } catch (error) {
+                console.error('Error saving patient notes:', error);
+                showAlert('Error connecting to server while saving notes.', 'danger');
+            } finally {
+                // Reset button state
+                const saveBtn = document.getElementById('saveNotesBtn');
+                saveBtn.textContent = 'Save Notes';
+                saveBtn.disabled = false;
+            }
+        }
+
+        // Expose savePatientNotes globally
+        window.savePatientNotes = savePatientNotes;
 
         // Alert and utility functions
         function showAlert(containerId, message, type = 'info') {
