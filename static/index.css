@@ -621,6 +621,61 @@
             z-index: 2; /* Ensure it's above the background */
         }
 
+        /* Calendar day services display */
+        .services-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .service-entry {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+
+        .service-time {
+            font-weight: bold;
+            color: #667eea;
+            min-width: 80px;
+            font-size: 0.9em;
+        }
+
+        .service-details {
+            flex: 1;
+        }
+
+        .service-type {
+            color: #666;
+            font-style: italic;
+        }
+
+        .service-status {
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
+        .status-attended {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-no-show {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-scheduled {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
         @media (max-width: 768px) {
             .form-row-2, .form-row-3 {
                 grid-template-columns: 1fr;

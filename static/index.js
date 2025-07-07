@@ -781,6 +781,95 @@
             }
         }
 
+        // Function to show services for a specific date (appointments only)
+        async function showServicesByDate(dateString) {
+            try {
+                // Fetch all patients
+                const patientsResponse = await authenticatedFetch(`${API_BASE}/patients/`);
+                if (!patientsResponse.ok) {
+                    showAlert('Failed to load patients', 'danger');
+                    return;
+                }
+                
+                const patients = await patientsResponse.json();
+                let servicesForDate = [];
+                
+                // Fetch appointment services for each patient on this date
+                const fetchPromises = patients.map(async patient => {
+                    try {
+                        const servicesResp = await authenticatedFetch(`${API_BASE}/patients/${patient.id}/services?service_category=appointment`);
+                        if (servicesResp.ok) {
+                            const services = await servicesResp.json();
+                            
+                            // Filter services for the specific date
+                            const dateServices = services.filter(service => service.service_date === dateString);
+                            dateServices.forEach(service => {
+                                servicesForDate.push({
+                                    ...service,
+                                    patient_name: `${patient.first_name} ${patient.last_name}`,
+                                    patient_number: patient.patient_number
+                                });
+                            });
+                        }
+                    } catch (err) {
+                        console.error(`Error fetching services for patient ${patient.id}:`, err);
+                    }
+                });
+                
+                await Promise.all(fetchPromises);
+                
+                // Sort services by time
+                servicesForDate.sort((a, b) => {
+                    if (a.service_time && b.service_time) {
+                        return a.service_time.localeCompare(b.service_time);
+                    }
+                    return 0;
+                });
+                
+                // Create modal content
+                let modalContent = `
+                    <div class="modal-header">
+                        <h3>Appointments for ${formatDateString(dateString)}</h3>
+                    </div>
+                    <div class="modal-body">
+                `;
+                
+                if (servicesForDate.length === 0) {
+                    modalContent += '<p>No appointments scheduled for this date.</p>';
+                } else {
+                    modalContent += '<div class="services-list">';
+                    servicesForDate.forEach(service => {
+                        const timeDisplay = service.service_time || 'No time specified';
+                        const attendedStatus = service.attended === true ? 'Attended' : 
+                                             service.attended === false ? 'No-show' : 'Scheduled';
+                        const statusClass = service.attended === true ? 'status-attended' : 
+                                          service.attended === false ? 'status-no-show' : 'status-scheduled';
+                        
+                        modalContent += `
+                            <div class="service-entry">
+                                <div class="service-time">${timeDisplay}</div>
+                                <div class="service-details">
+                                    <strong>${service.patient_name} (${service.patient_number})</strong><br>
+                                    <span class="service-type">${service.service_type}</span><br>
+                                    <span class="service-status ${statusClass}">${attendedStatus}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    modalContent += '</div>';
+                }
+                
+                modalContent += '</div>';
+                
+                // Show modal
+                showModal('Day Appointments', modalContent);
+                
+            } catch (error) {
+                console.error('Error fetching services for date:', error);
+                showAlert('Error loading appointments for this date', 'danger');
+            }
+        }
+
         // Helper to format 24-hour time ("HH:MM") to 12-hour AM/PM ("h:mm AM/PM")
         function formatTime12hr(timeStr) {
             if (!timeStr) return '';
@@ -990,10 +1079,10 @@
                 const patients = await response.json();
                 let servicesByDate = {};
                 
-                // Fetch services for each patient
+                // Fetch services for each patient (only appointment-based services for calendar)
                 const fetchPromises = patients.map(async patient => {
                     try {
-                        const servicesResp = await authenticatedFetch(`${API_BASE}/patients/${patient.id}/services`);
+                        const servicesResp = await authenticatedFetch(`${API_BASE}/patients/${patient.id}/services?service_category=appointment`);
                         if (servicesResp.ok) {
                             const services = await servicesResp.json();
                             
