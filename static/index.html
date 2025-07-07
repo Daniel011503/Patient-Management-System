@@ -522,13 +522,60 @@
    <!-- Services Section -->
    <div class="section" id="services">
     <h2 style="text-align:center;">Services</h2>
-    <div style="margin-top:30px; display:flex; gap:24px; flex-wrap:wrap; justify-content:center; align-items:center;">
-     <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('TMS')">TMS</button>
-     <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('PSR')">PSR</button>
-     <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('Individual Therapy')">Individual Therapy</button>
-     <button class="btn btn-service" style="min-width:180px;" onclick="openServiceForm('Evaluations')">Evaluations</button>
+    
+    <!-- Attendance Services -->
+    <div style="margin-top: 30px;">
+     <h3 style="text-align: center; color: #2c5530; margin-bottom: 20px;">📋 Attendance Services</h3>
+     <p style="text-align: center; color: #666; margin-bottom: 20px; font-size: 0.9em;">
+      Select days of the week for attendance tracking (Monday-Friday only)<br>
+      <strong>These services appear in Attendance Reports only</strong>
+     </p>
+     <div style="display:flex; gap:24px; justify-content:center; align-items:center;">
+      <button class="btn btn-service" style="min-width:180px; background-color: #4CAF50;" onclick="openAttendanceForm('TMS')">TMS Attendance</button>
+      <button class="btn btn-service" style="min-width:180px; background-color: #4CAF50;" onclick="openAttendanceForm('PSR')">PSR Attendance</button>
+     </div>
     </div>
-    <div style="color:#888; font-style:italic; margin-top:32px; text-align:center;">Select a service to continue.</div>
+
+    <!-- Separator -->
+    <div style="margin: 40px 0; border-top: 1px solid #ddd;"></div>
+
+    <!-- Appointment Services -->
+    <div>
+     <h3 style="text-align: center; color: #1565C0; margin-bottom: 20px;">📅 Appointment Services</h3>
+     <p style="text-align: center; color: #666; margin-bottom: 20px; font-size: 0.9em;">
+      Schedule individual appointments with specific times<br>
+      <strong>These services appear in the Calendar and Appointment Reports</strong>
+     </p>
+     <div style="display:flex; gap:24px; justify-content:center; align-items:center;">
+      <button class="btn btn-service" style="min-width:180px; background-color: #2196F3;" onclick="openAppointmentForm('Individual Therapy')">Individual Therapy</button>
+      <button class="btn btn-service" style="min-width:180px; background-color: #2196F3;" onclick="openAppointmentForm('Evaluations')">Evaluations</button>
+     </div>
+    </div>
+
+    <div style="color:#888; font-style:italic; margin-top:32px; text-align:center;">
+     <strong>Key Difference:</strong><br>
+     • <span style="color: #4CAF50;">Attendance services</span> track weekly attendance patterns<br>
+     • <span style="color: #2196F3;">Appointment services</span> schedule specific time slots
+    </div>
+
+    <!-- Recent Entries Section -->
+    <div style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 30px;">
+     <h3 style="text-align: center; margin-bottom: 20px;">📋 Recent Service Entries</h3>
+     <div style="margin-bottom: 20px; text-align: center;">
+      <button class="btn" onclick="loadRecentEntries()" style="background-color: #6c757d; color: white;">
+       🔄 Refresh Entries
+      </button>
+      <button class="btn" onclick="loadAttendanceEntries()" style="background-color: #4CAF50; color: white; margin-left: 10px;">
+       📋 View Attendance
+      </button>
+      <button class="btn" onclick="loadAppointmentEntries()" style="background-color: #2196F3; color: white; margin-left: 10px;">
+       📅 View Appointments
+      </button>
+     </div>
+     <div id="recentEntriesContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 15px; background-color: #f9f9f9;">
+      <p style="text-align: center; color: #666; font-style: italic;">Click "Refresh Entries" to load recent service entries</p>
+     </div>
+    </div>
    </div>
 
    <!-- Service Entry Modal -->
@@ -702,9 +749,212 @@
    </div>
    <div id="sheetEntriesContainer">
     <!-- Sheet entries will be loaded here -->
+   </div>    </div>
    </div>
-  </div>
- </div>
+
+   <!-- Attendance Form Modal -->
+   <div class="modal" id="attendanceModal" style="display:none;">
+    <div class="modal-content" style="max-width:500px;">
+     <div class="modal-header">
+      <h2 id="attendanceFormTitle">Add Attendance</h2>
+      <span class="close" onclick="closeAttendanceModal()">×</span>
+     </div>
+     <form id="attendanceForm" onsubmit="submitAttendance(event)">
+      <div class="form-group">
+       <label for="attendancePatientSearch">Patient Name <span class="required">*</span></label>
+       <input id="attendancePatientSearch" name="patient_name" type="text" placeholder="Search patient..." autocomplete="off" required oninput="searchAttendancePatients(this.value)">
+       <div id="attendancePatientSuggestions" class="autocomplete-suggestions"></div>
+       <input id="attendancePatientId" name="patient_id" type="hidden">
+      </div>
+      
+      <div class="form-group">
+       <label for="attendanceWeekStart">Week Starting (Monday) <span class="required">*</span></label>
+       <input id="attendanceWeekStart" name="week_start" type="date" required onchange="updateWeekDays()">
+       <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+        Select the Monday of the week you want to track attendance
+       </div>
+      </div>
+
+      <div class="form-group">
+       <label for="attendanceTime">Time <span class="required">*</span></label>
+       <select id="attendanceTime" name="service_time" required>
+        <option value="09:00">9:00 AM</option>
+        <option value="10:00">10:00 AM</option>
+        <option value="11:00">11:00 AM</option>
+        <option value="12:00">12:00 PM</option>
+        <option value="13:00">1:00 PM</option>
+        <option value="14:00">2:00 PM</option>
+        <option value="15:00">3:00 PM</option>
+        <option value="16:00">4:00 PM</option>
+        <option value="17:00">5:00 PM</option>
+       </select>
+      </div>
+
+      <div class="form-group">
+       <label><strong>Select Days of Attendance <span class="required">*</span></strong></label>
+       <div style="margin-top: 10px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
+        <div id="weekDaysContainer">
+         <div style="margin-bottom: 8px;">
+          <input type="checkbox" id="attendMon" name="attendance_days" value="0" style="margin-right: 8px; width: auto;">
+          <label for="attendMon" style="display: inline;">Monday <span id="monDate" style="color: #666;"></span></label>
+         </div>
+         <div style="margin-bottom: 8px;">
+          <input type="checkbox" id="attendTue" name="attendance_days" value="1" style="margin-right: 8px; width: auto;">
+          <label for="attendTue" style="display: inline;">Tuesday <span id="tueDate" style="color: #666;"></span></label>
+         </div>
+         <div style="margin-bottom: 8px;">
+          <input type="checkbox" id="attendWed" name="attendance_days" value="2" style="margin-right: 8px; width: auto;">
+          <label for="attendWed" style="display: inline;">Wednesday <span id="wedDate" style="color: #666;"></span></label>
+         </div>
+         <div style="margin-bottom: 8px;">
+          <input type="checkbox" id="attendThu" name="attendance_days" value="3" style="margin-right: 8px; width: auto;">
+          <label for="attendThu" style="display: inline;">Thursday <span id="thuDate" style="color: #666;"></span></label>
+         </div>
+         <div style="margin-bottom: 8px;">
+          <input type="checkbox" id="attendFri" name="attendance_days" value="4" style="margin-right: 8px; width: auto;">
+          <label for="attendFri" style="display: inline;">Friday <span id="friDate" style="color: #666;"></span></label>
+         </div>
+        </div>
+        <div style="color: #666; font-style: italic; margin-top: 10px; font-size: 0.9em;">
+         Select the days the patient attended during this week
+        </div>
+       </div>
+      </div>
+
+      <input id="attendanceServiceType" name="service_type" type="hidden">
+      
+      <div style="margin-top:20px; text-align:right;">
+       <button class="btn" type="submit" style="background-color: #4CAF50;">Add Attendance</button>
+       <button class="btn btn-danger" type="button" onclick="closeAttendanceModal()" style="margin-left:12px;">Cancel</button>
+      </div>
+     </form>
+    </div>
+   </div>
+
+   <!-- Appointment Form Modal -->
+   <div class="modal" id="appointmentModal" style="display:none;">
+    <div class="modal-content" style="max-width:420px;">
+     <div class="modal-header">
+      <h2 id="appointmentFormTitle">Add Appointment</h2>
+      <span class="close" onclick="closeAppointmentModal()">×</span>
+     </div>
+     <form id="appointmentForm" onsubmit="submitAppointment(event)">
+      <div class="form-group">
+       <label for="appointmentPatientSearch">Patient Name <span class="required">*</span></label>
+       <input id="appointmentPatientSearch" name="patient_name" type="text" placeholder="Search patient..." autocomplete="off" required oninput="searchAppointmentPatients(this.value)">
+       <div id="appointmentPatientSuggestions" class="autocomplete-suggestions"></div>
+       <input id="appointmentPatientId" name="patient_id" type="hidden">
+      </div>
+      
+      <div class="form-group">
+       <label for="appointmentDate">Appointment Date <span class="required">*</span></label>
+       <input id="appointmentDate" name="service_date" type="date" required>
+      </div>
+      
+      <div class="form-group">
+       <label for="appointmentTime">Appointment Time <span class="required">*</span></label>
+       <select id="appointmentTime" name="service_time" required>
+        <option value="09:00">9:00 AM</option>
+        <option value="09:15">9:15 AM</option>
+        <option value="09:30">9:30 AM</option>
+        <option value="09:45">9:45 AM</option>
+        <option value="10:00">10:00 AM</option>
+        <option value="10:15">10:15 AM</option>
+        <option value="10:30">10:30 AM</option>
+        <option value="10:45">10:45 AM</option>
+        <option value="11:00">11:00 AM</option>
+        <option value="11:15">11:15 AM</option>
+        <option value="11:30">11:30 AM</option>
+        <option value="11:45">11:45 AM</option>
+        <option value="12:00">12:00 PM</option>
+        <option value="12:15">12:15 PM</option>
+        <option value="12:30">12:30 PM</option>
+        <option value="12:45">12:45 PM</option>
+        <option value="13:00">1:00 PM</option>
+        <option value="13:15">1:15 PM</option>
+        <option value="13:30">1:30 PM</option>
+        <option value="13:45">1:45 PM</option>
+        <option value="14:00">2:00 PM</option>
+        <option value="14:15">2:15 PM</option>
+        <option value="14:30">2:30 PM</option>
+        <option value="14:45">2:45 PM</option>
+        <option value="15:00">3:00 PM</option>
+        <option value="15:15">3:15 PM</option>
+        <option value="15:30">3:30 PM</option>
+        <option value="15:45">3:45 PM</option>
+        <option value="16:00">4:00 PM</option>
+        <option value="16:15">4:15 PM</option>
+        <option value="16:30">4:30 PM</option>
+        <option value="16:45">4:45 PM</option>
+        <option value="17:00">5:00 PM</option>
+       </select>
+      </div>
+
+      <div class="form-group">
+       <input type="checkbox" id="appointmentAttended" name="attended" value="true" style="margin-right: 10px; width: auto;">
+       <label for="appointmentAttended">Patient Attended</label>
+      </div>
+
+      <!-- Recurring appointment options (kept for appointments only) -->
+      <div class="form-group">
+       <div style="margin-bottom: 10px;">
+        <input type="checkbox" id="isRecurringAppointment" style="margin-right: 10px; width: auto;">
+        <label for="isRecurringAppointment"><strong>Make this a recurring appointment</strong></label>
+       </div>
+       <div id="recurringAppointmentOptions" style="display: none; padding: 15px; background-color: #f9f9f9; border-radius: 5px; border: 1px solid #eee;">
+        <div style="margin-bottom: 15px;">
+         <label style="display: block; margin-bottom: 8px;"><strong>Recurring Type:</strong></label>
+         <div>
+          <input type="radio" name="recurring_type" id="recurAppointmentWeekly" value="weekly" checked style="margin-right: 8px; width: auto;">
+          <label for="recurAppointmentWeekly" style="display: inline; margin-right: 15px;">Weekly</label>
+          <input type="radio" name="recurring_type" id="recurAppointmentMonthly" value="monthly" style="margin-right: 8px; width: auto;">
+          <label for="recurAppointmentMonthly" style="display: inline;">Monthly</label>
+         </div>
+        </div>
+        
+        <!-- Weekly options -->
+        <div id="weeklyAppointmentOptions">
+         <div style="margin-bottom: 15px;">
+          <label for="appointmentWeeksCount"><strong>Number of weeks:</strong></label>
+          <select id="appointmentWeeksCount" style="width: 100px;">
+           <option value="1">1 week</option>
+           <option value="2">2 weeks</option>
+           <option value="3">3 weeks</option>
+           <option value="4" selected>4 weeks</option>
+           <option value="6">6 weeks</option>
+           <option value="8">8 weeks</option>
+           <option value="12">12 weeks</option>
+          </select>
+         </div>
+        </div>
+        
+        <!-- Monthly options -->
+        <div id="monthlyAppointmentOptions" style="display: none;">
+         <div style="margin-bottom: 15px;">
+          <label for="appointmentMonthsCount"><strong>Number of months:</strong></label>
+          <select id="appointmentMonthsCount" style="width: 100px;">
+           <option value="1">1 month</option>
+           <option value="2">2 months</option>
+           <option value="3" selected>3 months</option>
+           <option value="4">4 months</option>
+           <option value="6">6 months</option>
+           <option value="12">12 months</option>
+          </select>
+         </div>
+        </div>
+       </div>
+      </div>
+
+      <input id="appointmentServiceType" name="service_type" type="hidden">
+      
+      <div style="margin-top:20px; text-align:right;">
+       <button class="btn" type="submit" style="background-color: #2196F3;">Add Appointment</button>
+       <button class="btn btn-danger" type="button" onclick="closeAppointmentModal()" style="margin-left:12px;">Cancel</button>
+      </div>
+     </form>
+    </div>
+   </div>
+
   <!-- Add User Modal -->
   <div class="modal" id="addUserModal">
    <div class="modal-content">

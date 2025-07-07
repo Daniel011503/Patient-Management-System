@@ -497,23 +497,110 @@ def add_service_entry(
     db_patient = crud.get_patient(db, patient_id)
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Determine service category based on service type
+    if service.service_type in ["PSR", "TMS"]:
+        service.service_category = "attendance"
+        service.sheet_type = "attendance"
+    elif service.service_type in ["Evaluations", "Individual Therapy"]:
+        service.service_category = "appointment"
+        service.sheet_type = "appointment"
+    else:
+        # Default to appointment for any other service types
+        service.service_category = "appointment"
+        service.sheet_type = "appointment"
+    
     db_service = crud.add_service_entry(db, patient_id=patient_id, service=service)
     return {"success": True, "service": schemas.Service.model_validate(db_service)}
 
 @app.get("/patients/{patient_id}/services")
-def get_service_entries(
+def get_patient_services(
     patient_id: int,
     sheet_type: str = None,
+    service_category: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
+    """Get services for a specific patient with optional filters"""
     db_patient = crud.get_patient(db, patient_id)
     if not db_patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    services = getattr(db_patient, 'services', [])
-    if sheet_type:
-        services = [s for s in services if getattr(s, 'sheet_type', None) == sheet_type]
-    return [schemas.Service.model_validate(s) for s in services]
+    
+    try:
+        # Start with base query for this patient
+        query = db.query(models.Service).filter(models.Service.patient_id == patient_id)
+        
+        # Apply filters if provided
+        if sheet_type:
+            query = query.filter(models.Service.sheet_type == sheet_type)
+        if service_category:
+            query = query.filter(models.Service.service_category == service_category)
+        
+        # Get the services ordered by date
+        services = query.order_by(models.Service.service_date.desc()).all()
+        
+        return [schemas.Service.model_validate(s) for s in services]
+    except Exception as e:
+        logger.error(f"Error fetching patient services: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching services: {str(e)}")
+
+@app.post("/patients/{patient_id}/attendance")
+def add_attendance_week(
+    patient_id: int,
+    attendance_data: schemas.AttendanceWeekCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Add attendance entries for a patient for selected days in a week"""
+    db_patient = crud.get_patient(db, patient_id)
+    if not db_patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Validate service type is attendance-based
+    if attendance_data.service_type not in ["PSR", "TMS"]:
+        raise HTTPException(status_code=400, detail="Service type must be PSR or TMS for attendance tracking")
+    
+    try:
+        created_services = crud.add_attendance_week(db, patient_id=patient_id, attendance_data=attendance_data)
+        return {
+            "success": True, 
+            "message": f"Created {len(created_services)} attendance entries",
+            "services": [schemas.Service.model_validate(s) for s in created_services]
+        }
+    except Exception as e:
+        logger.error(f"Error creating attendance week: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating attendance entries: {str(e)}")
+
+@app.get("/attendance")
+def get_attendance_sheet(
+    patient_id: int = None,
+    service_type: str = None,
+    week_start: date = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get attendance sheet data with optional filters"""
+    try:
+        services = crud.get_attendance_services(db, patient_id=patient_id, service_type=service_type, week_start=week_start)
+        return [schemas.Service.model_validate(s) for s in services]
+    except Exception as e:
+        logger.error(f"Error fetching attendance data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching attendance data: {str(e)}")
+
+@app.get("/appointments") 
+def get_appointment_sheet(
+    patient_id: int = None,
+    service_type: str = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get appointment sheet data with optional filters"""
+    try:
+        services = crud.get_appointment_services(db, patient_id=patient_id, service_type=service_type)
+        return [schemas.Service.model_validate(s) for s in services]
+    except Exception as e:
+        logger.error(f"Error fetching appointment data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching appointment data: {str(e)}")
 
 @app.put("/services/{service_id}")
 def update_service_entry(
@@ -594,32 +681,29 @@ if __name__ == "__main__":
     import uvicorn
     import socket
     
-    # Try to find an available port starting from 8000
+    # Always use port 8000
     port = 8000
-    max_port = 8020  # Try up to port 8020
-    available_port = None
     
-    while port <= max_port:
-        try:
-            # Test if port is available
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('', port))
-                available_port = port
-                break
-        except OSError:
-            print(f"Port {port} is in use, trying next port...")
-            port += 1
-    
-    if available_port is None:
-        print(f"❌ Could not find an available port between 8000 and {max_port}")
-        print("Please manually stop the process using these ports and try again")
+    # Check if port 8000 is available
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('', port))
+    except OSError:
+        print(f"❌ Port {port} is already in use!")
+        print("To fix this:")
+        print("1. Close any other instances of this application")
+        print("2. Stop any other web servers running on port 8000")
+        print("3. Or run: netstat -ano | findstr :8000  (to find what's using the port)")
+        print("4. Then use: taskkill /PID <PID> /F  (to kill the process)")
         exit(1)
     
     print("🏥 Starting Spectrum Mental Health - Multi-User Support with Financial Tracking")
     print("=" * 70)
     print("🔧 Multiple users, same access level")
     print("💰 Financial tracking enabled")
-    print(f"🌐 Go to: http://localhost:{available_port}/")
+    print(f"🌐 Go to: http://localhost:{port}/")
+    print(f"🌐 Login: http://localhost:{port}/static/login.html")
+    print(f"🌐 Main App: http://localhost:{port}/static/index.html")
     print("📋 Everyone can manage users, patients, and finances")
     print("=" * 70)
-    uvicorn.run(app, host="0.0.0.0", port=available_port)
+    uvicorn.run(app, host="0.0.0.0", port=port)

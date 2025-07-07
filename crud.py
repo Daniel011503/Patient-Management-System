@@ -68,6 +68,8 @@ def add_service_entry(db: Session, patient_id: int, service: schemas.ServiceCrea
         service_date=service.service_date,
         service_time=service.service_time,
         sheet_type=service.sheet_type,
+        service_category=service.service_category,
+        week_start_date=service.week_start_date,
         attended=service.attended,
         is_recurring=service.is_recurring,
         recurring_pattern=service.recurring_pattern,
@@ -203,3 +205,55 @@ def create_recurring_appointments(db: Session, parent_service: models.Service, r
         db.commit()
         
     return created_services
+
+def add_attendance_week(db: Session, patient_id: int, attendance_data: schemas.AttendanceWeekCreate):
+    """Create attendance entries for a full week with selected days"""
+    created_services = []
+    
+    # Calculate dates for the selected days
+    for day_offset in attendance_data.selected_days:
+        service_date = attendance_data.week_start_date + timedelta(days=day_offset)
+        
+        # Create a service entry for each selected day
+        service = schemas.ServiceCreate(
+            service_type=attendance_data.service_type,
+            service_date=service_date,
+            service_time=attendance_data.service_time,
+            sheet_type="attendance",
+            service_category="attendance",
+            week_start_date=attendance_data.week_start_date,
+            attended=True,  # Mark selected days as attended
+            is_recurring=False,
+            recurring_pattern=None,
+            recurring_end_date=None,
+            parent_service_id=None
+        )
+        
+        db_service = add_service_entry(db, patient_id, service)
+        created_services.append(db_service)
+    
+    return created_services
+
+def get_attendance_services(db: Session, patient_id: int = None, service_type: str = None, week_start: date = None):
+    """Get attendance-based services with optional filters"""
+    query = db.query(models.Service).filter(models.Service.service_category == "attendance")
+    
+    if patient_id:
+        query = query.filter(models.Service.patient_id == patient_id)
+    if service_type:
+        query = query.filter(models.Service.service_type == service_type)
+    if week_start:
+        query = query.filter(models.Service.week_start_date == week_start)
+    
+    return query.order_by(models.Service.service_date).all()
+
+def get_appointment_services(db: Session, patient_id: int = None, service_type: str = None):
+    """Get appointment-based services with optional filters"""
+    query = db.query(models.Service).filter(models.Service.service_category == "appointment")
+    
+    if patient_id:
+        query = query.filter(models.Service.patient_id == patient_id)
+    if service_type:
+        query = query.filter(models.Service.service_type == service_type)
+    
+    return query.order_by(models.Service.service_date, models.Service.service_time).all()

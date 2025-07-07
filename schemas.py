@@ -101,6 +101,8 @@ class Service(BaseModel):
     service_date: date
     service_time: str  # Added service_time field
     sheet_type: str
+    service_category: str  # "attendance" or "appointment"
+    week_start_date: Optional[date] = None  # For attendance tracking
     attended: Optional[bool] = None  # Added attended field
     is_recurring: Optional[bool] = False
     recurring_pattern: Optional[str] = None
@@ -116,8 +118,30 @@ class ServiceCreate(BaseModel):
     service_date: date
     service_time: str  # Added service_time field
     sheet_type: str
+    service_category: str  # "attendance" or "appointment"
+    week_start_date: Optional[date] = None  # For attendance tracking
     attended: Optional[bool] = None  # Added attended field
     is_recurring: Optional[bool] = False
     recurring_pattern: Optional[str] = None
     recurring_end_date: Optional[date] = None
     parent_service_id: Optional[int] = None
+
+# New schemas for attendance-based services
+class AttendanceWeekCreate(BaseModel):
+    service_type: str  # PSR or TMS
+    week_start_date: date  # Start of the week (Monday)
+    selected_days: List[int]  # Days of the week [0=Monday, 1=Tuesday, ..., 4=Friday]
+    service_time: str
+
+class AttendanceEntry(BaseModel):
+    id: int
+    patient_id: int
+    service_type: str
+    service_date: date
+    service_time: str
+    attended: Optional[bool] = None
+    week_start_date: date
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
