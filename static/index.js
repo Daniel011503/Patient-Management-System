@@ -245,9 +245,6 @@
             } else if (sectionId === 'calendar-section') {
                 // Refresh the calendar to show updated appointments
                 renderCalendar();
-            } else if (sectionId === 'services-section') {
-                // Load recent service entries
-                loadRecentEntries();
             }
         }
 
@@ -1957,94 +1954,6 @@
             ensureAlertVisibility();
             originalShowModal(title, content);
         };
-        
-        // Load recent service entries
-        async function loadRecentEntries() {
-            try {
-                const container = document.getElementById('recentEntriesContainer');
-                container.innerHTML = '<p style="text-align: center; color: #666;">Loading...</p>';
-
-                const attendanceResponse = await fetch('/attendance');
-                const appointmentResponse = await fetch('/appointments');
-                
-                let attendanceData = [];
-                let appointmentData = [];
-                
-                if (attendanceResponse.ok) {
-                    attendanceData = await attendanceResponse.json();
-                    if (!Array.isArray(attendanceData)) {
-                        attendanceData = [];
-                    }
-                }
-                
-                if (appointmentResponse.ok) {
-                    appointmentData = await appointmentResponse.json();
-                    if (!Array.isArray(appointmentData)) {
-                        appointmentData = [];
-                    }
-                }
-
-                // Combine and sort all entries by date
-                const allEntries = [...attendanceData, ...appointmentData];
-                allEntries.sort((a, b) => new Date(b.service_date) - new Date(a.service_date));
-
-                displayServiceEntries(allEntries, 'All Recent Entries');
-            } catch (error) {
-                console.error('Error loading recent entries:', error);
-                document.getElementById('recentEntriesContainer').innerHTML = 
-                    '<p style="text-align: center; color: red;">Error loading entries. Please try again.</p>';
-            }
-        }
-
-        async function loadAttendanceEntries() {
-            try {
-                const container = document.getElementById('recentEntriesContainer');
-                container.innerHTML = '<p style="text-align: center; color: #666;">Loading attendance entries...</p>';
-
-                const response = await fetch('/attendance');
-                let data = [];
-                
-                if (response.ok) {
-                    data = await response.json();
-                    if (!Array.isArray(data)) {
-                        data = [];
-                    }
-                } else {
-                    console.log('Attendance endpoint returned:', response.status);
-                }
-
-                displayServiceEntries(data, 'Attendance Entries');
-            } catch (error) {
-                console.error('Error loading attendance entries:', error);
-                document.getElementById('recentEntriesContainer').innerHTML = 
-                    '<p style="text-align: center; color: red;">Error loading attendance entries. Please try again.</p>';
-            }
-        }
-
-        async function loadAppointmentEntries() {
-            try {
-                const container = document.getElementById('recentEntriesContainer');
-                container.innerHTML = '<p style="text-align: center; color: #666;">Loading appointment entries...</p>';
-
-                const response = await fetch('/appointments');
-                let data = [];
-                
-                if (response.ok) {
-                    data = await response.json();
-                    if (!Array.isArray(data)) {
-                        data = [];
-                                       }
-                } else {
-                    console.log('Appointments endpoint returned:', response.status);
-                }
-
-                displayServiceEntries(data, 'Appointment Entries');
-            } catch (error) {
-                console.error('Error loading appointment entries:', error);
-                document.getElementById('recentEntriesContainer').innerHTML = 
-                    '<p style="text-align: center; color: red;">Error loading appointment entries. Please try again.</p>';
-            }
-        }
 
         // Utility function to format date strings without timezone issues
         function formatDateString(dateString) {
@@ -2054,52 +1963,6 @@
             const [year, month, day] = dateString.split('-').map(Number);
             const date = new Date(year, month - 1, day); // month is 0-indexed
             return date.toLocaleDateString();
-        }
-
-        function displayServiceEntries(entries, title) {
-            const container = document.getElementById('recentEntriesContainer');
-            
-            // Ensure entries is an array
-            if (!Array.isArray(entries)) {
-                entries = [];
-            }
-            
-            if (entries.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align: center; color: #666; font-style: italic;">
-                        <h4>${title}</h4>
-                        <p>No entries found.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = `<h4 style="margin-bottom: 15px; color: #333;">${title} (${entries.length} total)</h4>`;
-            
-            entries.forEach(entry => {
-                const serviceDate = formatDateString(entry.service_date);
-                const categoryColor = entry.service_category === 'attendance' ? '#4CAF50' : '#2196F3';
-                const categoryIcon = entry.service_category === 'attendance' ? '📋' : '📅';
-                const attendedStatus = entry.attended === true ? '✅ Attended' : 
-                                     entry.attended === false ? '❌ Absent' : '⏳ Pending';
-                
-                html += `
-                    <div style="border: 1px solid #ddd; border-radius: 5px; padding: 12px; margin-bottom: 10px; background-color: white;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                            <strong style="color: ${categoryColor};">${categoryIcon} ${entry.service_type}</strong>
-                            <span style="font-size: 0.9em; color: #666;">${serviceDate} at ${entry.service_time}</span>
-                        </div>
-                        <div style="font-size: 0.9em; color: #666;">
-                            Patient ID: ${entry.patient_id} | 
-                            Category: ${entry.service_category} | 
-                            Status: ${attendedStatus}
-                        </div>
-                        ${entry.week_start_date ? `<div style="font-size: 0.8em; color: #888; margin-top: 5px;">Week of: ${formatDateString(entry.week_start_date)}</div>` : ''}
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
         }
 
         // Function to save patient notes
