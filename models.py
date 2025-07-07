@@ -19,7 +19,6 @@ class Patient(Base):
     medicaid_id = Column(String)
     insurance = Column(String)
     insurance_id = Column(String)
-    session = Column(String, nullable=False)  # AM or PM
     referal = Column(String)
     psr_date = Column(Date)
     authorization = Column(String)

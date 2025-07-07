@@ -571,12 +571,9 @@
                     <div class="patient-name">${patient.first_name} ${patient.last_name}</div>
                     <div class="patient-details">
                         ${patient.phone ? `<strong>Phone:</strong> ${patient.phone}<br />` : '<strong>Phone:</strong> Not provided<br />'}
-                        <strong>Session:</strong> ${patient.session}
                     </div>
                     <div style="margin-top: 15px;">
                         <button class="btn btn-small" onclick="viewPatient(${patient.id})" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">View</button>
-                        <button class="btn btn-small" onclick="editPatient(${patient.id})" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">Edit</button>
-                        <button class="btn btn-danger btn-small" onclick="deletePatient(${patient.id})">Delete</button>
                     </div>
                 </div>
             `).join('');
@@ -597,11 +594,14 @@
 
         // View Patient Function
         async function viewPatient(patientId) {
+            console.log('🔍 Loading patient details for ID:', patientId);
             try {
                 const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}`);
+                console.log('📡 Patient API response:', response);
                 
                 if (response && response.ok) {
                     const patient = await response.json();
+                    console.log('👤 Patient data loaded:', patient);
                     
                     // Fetch patient files
                     let filesHtml = '';
@@ -625,6 +625,7 @@
                             filesHtml = `<div style='margin-top:20px; color:#e74c3c;'>Error loading files.</div>`;
                         }
                     } catch (e) {
+                        console.error('Error loading patient files:', e);
                         filesHtml = `<div style='margin-top:20px; color:#e74c3c;'>Error loading files.</div>`;
                     }
 
@@ -638,96 +639,130 @@
                         </form>
                     `;
 
-                    // Move filesHtml below uploadFormHtml and remove servicesHtml
+                    // Modern patient info view with organized sections
                     const modalContent = `
-                        <div class=\"patient-info-grid\">
+                        <div class="patient-view-header">
+                            <div class="patient-avatar">
+                                <div class="avatar-circle">
+                                    ${patient.first_name.charAt(0)}${patient.last_name.charAt(0)}
+                                </div>
+                            </div>
+                            <div class="patient-title-info">
+                                <h2 class="patient-name">${patient.first_name} ${patient.last_name}</h2>
+                                <p class="patient-number">ID: ${patient.patient_number}</p>
+                                <p class="patient-status">Status: ${patient.end_date ? 'Inactive' : 'Active'}</p>
+                            </div>
+                        </div>
 
-                            <div class="patient-info-item">
-                                <label>Patient Number:</label>
-                                <p>${patient.patient_number || 'Not provided'}</p>
+                        <div class="patient-info-sections">
+                            <!-- Personal Information Section -->
+                            <div class="info-section">
+                                <h3 class="section-title">
+                                    <span class="section-icon">👤</span>
+                                    Personal Information
+                                </h3>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <label>Date of Birth</label>
+                                        <span>${patient.date_of_birth ? formatDateString(patient.date_of_birth) : 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Phone</label>
+                                        <span>${patient.phone || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item full-width">
+                                        <label>Address</label>
+                                        <span>${patient.address || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>SSN</label>
+                                        <span>${patient.ssn ? '***-**-' + patient.ssn.slice(-4) : 'Not provided'}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="patient-info-item">
-                                <label>Session:</label>
-                                <p>${patient.session || 'Not provided'}</p>
+
+                            <!-- Insurance Information Section -->
+                            <div class="info-section">
+                                <h3 class="section-title">
+                                    <span class="section-icon">🏥</span>
+                                    Insurance & Medical
+                                </h3>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <label>Insurance Provider</label>
+                                        <span>${patient.insurance || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Insurance ID</label>
+                                        <span>${patient.insurance_id || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Medicaid ID</label>
+                                        <span>${patient.medicaid_id || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>PSR Date</label>
+                                        <span>${patient.psr_date ? formatDateString(patient.psr_date) : 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item full-width">
+                                        <label>Authorization</label>
+                                        <span>${patient.authorization || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item full-width">
+                                        <label>Diagnosis</label>
+                                        <span>${patient.diagnosis || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Referral</label>
+                                        <span>${patient.referal || 'Not provided'}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="patient-info-item">
-                                <label>First Name:</label>
-                                <p>${patient.first_name || 'Not provided'}</p>
+
+                            <!-- Treatment Information Section -->
+                            <div class="info-section">
+                                <h3 class="section-title">
+                                    <span class="section-icon">📋</span>
+                                    Treatment Information
+                                </h3>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <label>Start Date</label>
+                                        <span>${patient.start_date ? formatDateString(patient.start_date) : 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>End Date</label>
+                                        <span class="${patient.end_date ? 'status-inactive' : 'status-active'}">
+                                            ${patient.end_date ? formatDateString(patient.end_date) : 'Ongoing'}
+                                        </span>
+                                    </div>
+                                    <div class="codes-grid">
+                                        <div class="code-item">
+                                            <label>Code 1</label>
+                                            <span class="code-value">${patient.code1 || 'N/A'}</span>
+                                        </div>
+                                        <div class="code-item">
+                                            <label>Code 2</label>
+                                            <span class="code-value">${patient.code2 || 'N/A'}</span>
+                                        </div>
+                                        <div class="code-item">
+                                            <label>Code 3</label>
+                                            <span class="code-value">${patient.code3 || 'N/A'}</span>
+                                        </div>
+                                        <div class="code-item">
+                                            <label>Code 4</label>
+                                            <span class="code-value">${patient.code4 || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="patient-info-item">
-                                <label>Last Name:</label>
-                                <p>${patient.last_name || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item patient-info-full">
-                                <label>Address:</label>
-                                <p>${patient.address || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Date of Birth:</label>
-                                <p>${patient.date_of_birth ? formatDateString(patient.date_of_birth) : 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Phone:</label>
-                                <p>${patient.phone || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Social Security Number:</label>
-                                <p>${patient.ssn || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Medicaid ID:</label>
-                                <p>${patient.medicaid_id || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Insurance:</label>
-                                <p>${patient.insurance || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Insurance ID:</label>
-                                <p>${patient.insurance_id || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Referal:</label>
-                                <p>${patient.referal || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>PSR Date:</label>
-                                <p>${patient.psr_date ? formatDateString(patient.psr_date) : 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item patient-info-full">
-                                <label>Authorization:</label>
-                                <p>${patient.authorization || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item patient-info-full">
-                                <label>Diagnosis:</label>
-                                <p>${patient.diagnosis || 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Start Date:</label>
-                                <p>${patient.start_date ? formatDateString(patient.start_date) : 'Not provided'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>End Date:</label>
-                                <p>${patient.end_date ? formatDateString(patient.end_date) : 'Ongoing'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Code 1:</label>
-                                <p>${patient.code1 || 'Not assigned'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Code 2:</label>
-                                <p>${patient.code2 || 'Not assigned'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Code 3:</label>
-                                <p>${patient.code3 || 'Not assigned'}</p>
-                            </div>
-                            <div class="patient-info-item">
-                                <label>Code 4:</label>
-                                <p>${patient.code4 || 'Not assigned'}</p>
-                            </div>
-                            <div class="patient-info-item patient-info-full">
-                                <label>Notes:</label>
+
+                            <!-- Notes Section -->
+                            <div class="info-section">
+                                <h3 class="section-title">
+                                    <span class="section-icon">📝</span>
+                                    Notes
+                                </h3>
                                 <div class="notes-section">
                                     <textarea 
                                         id="patientNotes" 
@@ -735,63 +770,94 @@
                                         rows="4" 
                                         placeholder="Enter notes about this patient..."
                                     >${patient.notes || ''}</textarea>
-                                    <button class="btn btn-small btn-primary" id="saveNotesBtn" onclick="savePatientNotes(${patient.id})">
+                                    <button class="btn btn-primary btn-small" id="saveNotesBtn" onclick="savePatientNotes(${patient.id})">
                                         Save Notes
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <div style="margin-top: 20px;">
-                            <button class="btn btn-info btn-small attendance-sheet-btn" data-patient-id="${patient.id}">Attendance Sheet</button>
-                            <button class="btn btn-primary btn-small appointment-sheet-btn" data-patient-id="${patient.id}">Appointment Sheet</button>
+
+                        <!-- Action Buttons Section -->
+                        <div class="patient-actions">
+                            <div class="action-buttons">
+                                <button class="btn btn-secondary" onclick="editPatient(${patient.id})">
+                                    <span class="btn-icon">✏️</span> Edit Patient
+                                </button>
+                                <button class="btn btn-danger" onclick="deletePatient(${patient.id})" style="margin-left: 10px;">
+                                    <span class="btn-icon">🗑️</span> Delete Patient
+                                </button>
+                                <button class="btn btn-info attendance-sheet-btn">
+                                    <span class="btn-icon">📊</span> Attendance Sheet
+                                </button>
+                                <button class="btn btn-info appointment-sheet-btn">
+                                    <span class="btn-icon">📅</span> Appointment Sheet
+                                </button>
+                            </div>
                         </div>
+
+                        <!-- File Upload Section -->
                         ${uploadFormHtml}
                         ${filesHtml}
                     `;
 
                     showModal('Patient Details', modalContent);
 
-                    // Attach event listeners for Attendance/Appointment Sheet buttons
-                    document.querySelector('.attendance-sheet-btn').addEventListener('click', function() {
-                        showSheetModal(patient.id, 'attendance');
-                    });
-                    document.querySelector('.appointment-sheet-btn').addEventListener('click', function() {
-                        showSheetModal(patient.id, 'appointment');
-                    });
+                    // Use setTimeout to ensure modal content is rendered before attaching listeners
+                    setTimeout(() => {
+                        // Attach event listeners for Attendance/Appointment Sheet buttons
+                        const attendanceBtn = document.querySelector('.attendance-sheet-btn');
+                        const appointmentBtn = document.querySelector('.appointment-sheet-btn');
+                        
+                        if (attendanceBtn) {
+                            attendanceBtn.addEventListener('click', function() {
+                                showSheetModal(patient.id, 'attendance');
+                            });
+                        }
+                        
+                        if (appointmentBtn) {
+                            appointmentBtn.addEventListener('click', function() {
+                                showSheetModal(patient.id, 'appointment');
+                            });
+                        }
 
-                    // Attach file upload handler
-                    const uploadForm = document.getElementById('patientFileUploadForm');
-                    if (uploadForm) {
-                        uploadForm.addEventListener('submit', async function(e) {
-                            e.preventDefault();
-                            const fileInput = document.getElementById('patientFileInput');
-                            const alertDiv = document.getElementById('patientFileUploadAlert');
-                            if (!fileInput.files.length) {
-                                alertDiv.innerHTML = '<span style="color:red;">Please select a file.</span>';
-                                return;
-                            }
-                            const formData = new FormData();
-                            formData.append('file', fileInput.files[0]);
-                            try {
-                                const resp = await fetch(`${API_BASE}/patients/${patient.id}/files`, {
-                                    method: 'POST',
-                                    headers: { 'Authorization': `Bearer ${accessToken}` },
-                                    body: formData
-                                });
-                                if (resp.ok) {
-                                    alertDiv.innerHTML = '<span style="color:green;">File uploaded!</span>';
-                                    setTimeout(() => viewPatient(patient.id), 1000);
-                                } else {
-                                    alertDiv.innerHTML = '<span style="color:red;">Upload failed.</span>';
+                        // Attach file upload handler
+                        const uploadForm = document.getElementById('patientFileUploadForm');
+                        if (uploadForm) {
+                            uploadForm.addEventListener('submit', async function(e) {
+                                e.preventDefault();
+                                const fileInput = document.getElementById('patientFileInput');
+                                const alertDiv = document.getElementById('patientFileUploadAlert');
+                                if (!fileInput.files.length) {
+                                    alertDiv.innerHTML = '<span style="color:red;">Please select a file.</span>';
+                                    return;
                                 }
-                            } catch (err) {
-                                alertDiv.innerHTML = '<span style="color:red;">Error uploading file.</span>';
-                            }
-                        });
-                    }
+                                const formData = new FormData();
+                                formData.append('file', fileInput.files[0]);
+                                try {
+                                    const resp = await fetch(`${API_BASE}/patients/${patient.id}/files`, {
+                                        method: 'POST',
+                                        headers: { 'Authorization': `Bearer ${accessToken}` },
+                                        body: formData
+                                    });
+                                    if (resp.ok) {
+                                        alertDiv.innerHTML = '<span style="color:green;">File uploaded!</span>';
+                                        setTimeout(() => viewPatient(patient.id), 1000);
+                                    } else {
+                                        alertDiv.innerHTML = '<span style="color:red;">Upload failed.</span>';
+                                    }
+                                } catch (err) {
+                                    alertDiv.innerHTML = '<span style="color:red;">Error uploading file.</span>';
+                                }
+                            });
+                        }
+                    }, 100); // Small delay to ensure DOM is ready
+                } else {
+                    console.error('❌ Failed to load patient data:', response ? response.status : 'No response');
+                    showModal('Error', `Failed to load patient details. Status: ${response ? response.status : 'No response'}`);
                 }
             } catch (error) {
-                showModal('Error', 'Failed to load patient details.');
+                console.error('❌ Error in viewPatient:', error);
+                showModal('Error', `Failed to load patient details: ${error.message}`);
             }
         }
 
@@ -1242,95 +1308,137 @@
                     // Build edit form modal
                     const modalContent = `
                         <form id='editPatientForm'>
-                            <div class='form-group'>
-                                <label>Patient Number</label>
-                                <input name='patient_number' value='${patient.patient_number || ''}' required />
+                            <!-- Basic Information Section -->
+                            <div class='form-section'>
+                                <h3 class='section-title'>Basic Information</h3>
+                                <div class='form-group'>
+                                    <label>Patient Number</label>
+                                    <input name='patient_number' value='${patient.patient_number || ''}' required />
+                                </div>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>First Name</label>
+                                        <input name='first_name' value='${patient.first_name || ''}' required />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>Last Name</label>
+                                        <input name='last_name' value='${patient.last_name || ''}' required />
+                                    </div>
+                                </div>
+                                <div class='form-row-3'>
+                                    <div class='form-group'>
+                                        <label>Date of Birth</label>
+                                        <input name='date_of_birth' type='date' value='${patient.date_of_birth ? patient.date_of_birth.split('T')[0] : ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>Phone</label>
+                                        <input name='phone' value='${patient.phone || ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>SSN</label>
+                                        <input name='ssn' value='${patient.ssn || ''}' />
+                                    </div>
+                                </div>
+                                <div class='form-group'>
+                                    <label>Address</label>
+                                    <input name='address' value='${patient.address || ''}' />
+                                </div>
                             </div>
-                            <div class='form-group'>
-                                <label>First Name</label>
-                                <input name='first_name' value='${patient.first_name || ''}' required />
+
+                            <!-- Insurance Information Section -->
+                            <div class='form-section'>
+                                <h3 class='section-title'>Insurance & Coverage</h3>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>Insurance Provider</label>
+                                        <input name='insurance' value='${patient.insurance || ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>Insurance ID</label>
+                                        <input name='insurance_id' value='${patient.insurance_id || ''}' />
+                                    </div>
+                                </div>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>Medicaid ID</label>
+                                        <input name='medicaid_id' value='${patient.medicaid_id || ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>Authorization</label>
+                                        <input name='authorization' value='${patient.authorization || ''}' />
+                                    </div>
+                                </div>
                             </div>
-                            <div class='form-group'>
-                                <label>Last Name</label>
-                                <input name='last_name' value='${patient.last_name || ''}' required />
+
+                            <!-- Medical Information Section -->
+                            <div class='form-section'>
+                                <h3 class='section-title'>Medical Information</h3>
+                                <div class='form-group'>
+                                    <label>Diagnosis</label>
+                                    <input name='diagnosis' value='${patient.diagnosis || ''}' />
+                                </div>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>Referral Source</label>
+                                        <input name='referal' value='${patient.referal || ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>PSR Date</label>
+                                        <input name='psr_date' type='date' value='${patient.psr_date ? patient.psr_date.split('T')[0] : ''}' />
+                                    </div>
+                                </div>
                             </div>
-                            <div class='form-group'>
-                                <label>Session</label>
-                                <input name='session' value='${patient.session || ''}' required />
+
+                            <!-- Service Period Section -->
+                            <div class='form-section'>
+                                <h3 class='section-title'>Service Period</h3>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>Start Date</label>
+                                        <input name='start_date' type='date' value='${patient.start_date ? patient.start_date.split('T')[0] : ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>End Date</label>
+                                        <input name='end_date' type='date' value='${patient.end_date ? patient.end_date.split('T')[0] : ''}' />
+                                    </div>
+                                </div>
                             </div>
-                            <div class='form-group'>
-                                <label>Phone</label>
-                                <input name='phone' value='${patient.phone || ''}' />
+
+                            <!-- Billing Codes Section -->
+                            <div class='form-section'>
+                                <h3 class='section-title'>Billing Codes</h3>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>Code 1</label>
+                                        <input name='code1' value='${patient.code1 || ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>Code 2</label>
+                                        <input name='code2' value='${patient.code2 || ''}' />
+                                    </div>
+                                </div>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>Code 3</label>
+                                        <input name='code3' value='${patient.code3 || ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>Code 4</label>
+                                        <input name='code4' value='${patient.code4 || ''}' />
+                                    </div>
+                                </div>
                             </div>
-                            <div class='form-group'>
-                                <label>Address</label>
-                                <input name='address' value='${patient.address || ''}' />
+
+                            <!-- Additional Notes Section -->
+                            <div class='form-section'>
+                                <h3 class='section-title'>Additional Notes</h3>
+                                <div class='form-group'>
+                                    <label>Notes</label>
+                                    <textarea name='notes' rows='4' placeholder='Enter any additional notes about this patient...'>${patient.notes || ''}</textarea>
+                                </div>
                             </div>
-                            <div class='form-group'>
-                                <label>Date of Birth</label>
-                                <input name='date_of_birth' type='date' value='${patient.date_of_birth ? patient.date_of_birth.split('T')[0] : ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>SSN</label>
-                                <input name='ssn' value='${patient.ssn || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Medicaid ID</label>
-                                <input name='medicaid_id' value='${patient.medicaid_id || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Insurance</label>
-                                <input name='insurance' value='${patient.insurance || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Insurance ID</label>
-                                <input name='insurance_id' value='${patient.insurance_id || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Referal</label>
-                                <input name='referal' value='${patient.referal || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>PSR Date</label>
-                                <input name='psr_date' type='date' value='${patient.psr_date ? patient.psr_date.split('T')[0] : ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Authorization</label>
-                                <input name='authorization' value='${patient.authorization || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Diagnosis</label>
-                                <input name='diagnosis' value='${patient.diagnosis || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Start Date</label>
-                                <input name='start_date' type='date' value='${patient.start_date ? patient.start_date.split('T')[0] : ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>End Date</label>
-                                <input name='end_date' type='date' value='${patient.end_date ? patient.end_date.split('T')[0] : ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Code 1</label>
-                                <input name='code1' value='${patient.code1 || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Code 2</label>
-                                <input name='code2' value='${patient.code2 || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Code 3</label>
-                                <input name='code3' value='${patient.code3 || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Code 4</label>
-                                <input name='code4' value='${patient.code4 || ''}' />
-                            </div>
-                            <div class='form-group'>
-                                <label>Notes</label>
-                                <textarea name='notes' rows='3' placeholder='Enter any additional notes about this patient...'>${patient.notes || ''}</textarea>
-                            </div>
-                            <div style='margin-top:20px;'>
+
+                            <div class='form-actions'>
                                 <button class='btn' type='submit'>Save Changes</button>
                                 <button class='btn btn-danger' type='button' id='cancelEditPatientBtn' style='margin-left:15px;'>Cancel</button>
                             </div>

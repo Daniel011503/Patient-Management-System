@@ -14,7 +14,6 @@ class PatientBase(BaseModel):
     medicaid_id: Optional[str] = None
     insurance: Optional[str] = None
     insurance_id: Optional[str] = None
-    session: str
     referal: Optional[str] = None
     psr_date: Optional[date] = None  # Fixed: Changed from datetime to date
     authorization: Optional[str] = None
@@ -34,7 +33,6 @@ class PatientUpdate(PatientBase):
     patient_number: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    session: Optional[str] = None
 
 class Patient(PatientBase):
     id: int

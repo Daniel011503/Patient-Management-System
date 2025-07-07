@@ -69,206 +69,219 @@
         <!-- Alert content will be injected by JavaScript -->
     </div>
     <form id="patientForm">
-     <div class="form-row-2">
-      <div class="form-group">
-       <label for="patientNumber">
-        Patient Number
-        <span class="required">
-         *
-        </span>
-       </label>
-       <input id="patientNumber" name="patient_number" placeholder="e.g., PT001A" required="" type="text"/>
+     <!-- Basic Information Section -->
+     <div class="form-section">
+      <h3 class="section-title">Basic Information</h3>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="patientNumber">
+         Patient Number
+         <span class="required">
+          *
+         </span>
+        </label>
+        <input id="patientNumber" name="patient_number" placeholder="e.g., PT001A" required="" type="text"/>
+       </div>
+      </div>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="firstName">
+         First Name
+         <span class="required">
+          *
+         </span>
+        </label>
+        <input id="firstName" name="first_name" required="" type="text"/>
+       </div>
+       <div class="form-group">
+        <label for="lastName">
+         Last Name
+         <span class="required">
+          *
+         </span>
+        </label>
+        <input id="lastName" name="last_name" required="" type="text"/>
+       </div>
+      </div>
+      <div class="form-row-3">
+       <div class="form-group">
+        <label for="dateOfBirth">
+         Date of Birth
+        </label>
+        <input id="dateOfBirth" name="date_of_birth" type="date"/>
+       </div>
+       <div class="form-group">
+        <label for="phone">
+         Phone Number
+        </label>
+        <input id="phone" name="phone" placeholder="(305) 555-0123" type="tel"/>
+       </div>
+       <div class="form-group">
+        <label for="ssn">
+         SSN
+        </label>
+        <input id="ssn" maxlength="11" name="ssn" placeholder="XXX-XX-XXXX" type="text"/>
+       </div>
       </div>
       <div class="form-group">
-       <label for="session">
-        Session
-        <span class="required">
-         *
-        </span>
+       <label for="address">
+        Address
        </label>
-       <select id="session" name="session" required="">
-        <option value="">
-         Select Session
-        </option>
-        <option value="AM">
-         AM Session
-        </option>
-        <option value="PM">
-         PM Session
-        </option>
-       </select>
-      </div>
-     </div>
-     <div class="form-row-2">
-      <div class="form-group">
-       <label for="firstName">
-        First Name
-        <span class="required">
-         *
-        </span>
-       </label>
-       <input id="firstName" name="first_name" required="" type="text"/>
-      </div>
-      <div class="form-group">
-       <label for="lastName">
-        Last Name
-        <span class="required">
-         *
-        </span>
-       </label>
-       <input id="lastName" name="last_name" required="" type="text"/>
-      </div>
-     </div>
-     <div class="form-group">
-      <label for="address">
-       Address
-      </label>
-      <input id="address" name="address" placeholder="Full address including city, state, zip" type="text"/>
-     </div>
-     <div class="form-row-3">
-      <div class="form-group">
-       <label for="dateOfBirth">
-        Date of Birth
-       </label>
-       <input id="dateOfBirth" name="date_of_birth" type="date"/>
-      </div>
-      <div class="form-group">
-       <label for="phone">
-        Phone Number
-       </label>
-       <input id="phone" name="phone" placeholder="(305) 555-0123" type="tel"/>
-      </div>
-      <div class="form-group">
-       <label for="ssn">
-        SSN
-       </label>
-       <input id="ssn" maxlength="11" name="ssn" placeholder="XXX-XX-XXXX" type="text"/>
+       <input id="address" name="address" placeholder="Full address including city, state, zip" type="text"/>
       </div>
      </div>
-     <div class="form-row-2">
-      <div class="form-group">
-       <label for="medicaidId">
-        Medicaid ID
-       </label>
-       <input id="medicaidId" name="medicaid_id" type="text"/>
+
+     <!-- Insurance Information Section -->
+     <div class="form-section">
+      <h3 class="section-title">Insurance & Coverage</h3>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="insurance">
+         Insurance Provider
+        </label>
+        <select id="insurance" name="insurance">
+         <option value="">
+          Select Insurance
+         </option>
+         <option value="Medicaid">
+          Medicaid
+         </option>
+         <option value="Medicare">
+          Medicare
+         </option>
+         <option value="Aetna">
+          Aetna
+         </option>
+         <option value="Blue Cross Blue Shield">
+          Blue Cross Blue Shield
+         </option>
+         <option value="Humana">
+          Humana
+         </option>
+         <option value="UnitedHealthcare">
+          UnitedHealthcare
+         </option>
+         <option value="Other">
+          Other
+         </option>
+        </select>
+       </div>
+       <div class="form-group">
+        <label for="insuranceId">
+         Insurance ID
+        </label>
+        <input id="insuranceId" name="insurance_id" type="text"/>
+       </div>
       </div>
-      <div class="form-group">
-       <label for="insurance">
-        Insurance
-       </label>
-       <select id="insurance" name="insurance">
-        <option value="">
-         Select Insurance
-        </option>
-        <option value="Medicaid">
-         Medicaid
-        </option>
-        <option value="Medicare">
-         Medicare
-        </option>
-        <option value="Aetna">
-         Aetna
-        </option>
-        <option value="Blue Cross Blue Shield">
-         Blue Cross Blue Shield
-        </option>
-        <option value="Humana">
-         Humana
-        </option>
-        <option value="UnitedHealthcare">
-         UnitedHealthcare
-        </option>
-        <option value="Other">
-         Other
-        </option>
-       </select>
-      </div>
-     </div>
-     <div class="form-row-2">
-      <div class="form-group">
-       <label for="insuranceId">
-        Insurance ID
-       </label>
-       <input id="insuranceId" name="insurance_id" type="text"/>
-      </div>
-      <div class="form-group">
-       <label for="referal">
-        Referal
-       </label>
-       <input id="referal" name="referal" placeholder="Who referred this patient?" type="text"/>
-      </div>
-     </div>
-     <div class="form-row-2">
-      <div class="form-group">
-       <label for="psrDate">
-        PSR Date
-       </label>
-       <input id="psrDate" name="psr_date" type="date"/>
-      </div>
-      <div class="form-group">
-       <label for="authorization">
-        Authorization
-       </label>
-       <input id="authorization" name="authorization" placeholder="Authorization details" type="text"/>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="medicaidId">
+         Medicaid ID
+        </label>
+        <input id="medicaidId" name="medicaid_id" type="text"/>
+       </div>
+       <div class="form-group">
+        <label for="authorization">
+         Authorization
+        </label>
+        <input id="authorization" name="authorization" placeholder="Authorization details" type="text"/>
+       </div>
       </div>
      </div>
-     <div class="form-group">
-      <label for="diagnosis">
-       Diagnosis
-      </label>
-      <input id="diagnosis" name="diagnosis" placeholder="Diagnosis codes and description" type="text"/>
-     </div>
-     <div class="form-row-2">
+
+     <!-- Medical Information Section -->
+     <div class="form-section">
+      <h3 class="section-title">Medical Information</h3>
       <div class="form-group">
-       <label for="startDate">
-        Start Date
+       <label for="diagnosis">
+        Diagnosis
        </label>
-       <input id="startDate" name="start_date" type="date"/>
+       <input id="diagnosis" name="diagnosis" placeholder="Diagnosis codes and description" type="text"/>
       </div>
-      <div class="form-group">
-       <label for="endDate">
-        End Date
-       </label>
-       <input id="endDate" name="end_date" type="date"/>
-      </div>
-     </div>
-     <div class="form-row-2">
-      <div class="form-group">
-       <label for="code1">
-        Code 1
-       </label>
-       <input id="code1" name="code1" placeholder="e.g., A3329(1)" type="text"/>
-      </div>
-      <div class="form-group">
-       <label for="code2">
-        Code 2
-       </label>
-       <input id="code2" name="code2" placeholder="e.g., B1234(2)" type="text"/>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="referal">
+         Referral Source
+        </label>
+        <input id="referal" name="referal" placeholder="Who referred this patient?" type="text"/>
+       </div>
+       <div class="form-group">
+        <label for="psrDate">
+         PSR Date
+        </label>
+        <input id="psrDate" name="psr_date" type="date"/>
+       </div>
       </div>
      </div>
-     <div class="form-row-2">
-      <div class="form-group">
-       <label for="code3">
-        Code 3
-       </label>
-       <input id="code3" name="code3" placeholder="e.g., C5678(3)" type="text"/>
-      </div>
-      <div class="form-group">
-       <label for="code4">
-        Code 4
-       </label>
-       <input id="code4" name="code4" placeholder="e.g., D9876(4)" type="text"/>
+
+     <!-- Service Period Section -->
+     <div class="form-section">
+      <h3 class="section-title">Service Period</h3>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="startDate">
+         Start Date
+        </label>
+        <input id="startDate" name="start_date" type="date"/>
+       </div>
+       <div class="form-group">
+        <label for="endDate">
+         End Date
+        </label>
+        <input id="endDate" name="end_date" type="date"/>
+       </div>
       </div>
      </div>
-     <div class="form-group">
-      <label for="notes">
-       Notes
-      </label>
-      <textarea id="notes" name="notes" placeholder="Enter any additional notes about this patient..." rows="3"></textarea>
+
+     <!-- Billing Codes Section -->
+     <div class="form-section">
+      <h3 class="section-title">Billing Codes</h3>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="code1">
+         Code 1
+        </label>
+        <input id="code1" name="code1" placeholder="e.g., A3329(1)" type="text"/>
+       </div>
+       <div class="form-group">
+        <label for="code2">
+         Code 2
+        </label>
+        <input id="code2" name="code2" placeholder="e.g., B1234(2)" type="text"/>
+       </div>
+      </div>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="code3">
+         Code 3
+        </label>
+        <input id="code3" name="code3" placeholder="e.g., C5678(3)" type="text"/>
+       </div>
+       <div class="form-group">
+        <label for="code4">
+         Code 4
+        </label>
+        <input id="code4" name="code4" placeholder="e.g., D9876(4)" type="text"/>
+       </div>
+      </div>
      </div>
-     <button class="btn" type="submit">
-      Add Patient
-     </button>
+
+     <!-- Additional Notes Section -->
+     <div class="form-section">
+      <h3 class="section-title">Additional Notes</h3>
+      <div class="form-group">
+       <label for="notes">
+        Notes
+       </label>
+       <textarea id="notes" name="notes" placeholder="Enter any additional notes about this patient..." rows="4"></textarea>
+      </div>
+     </div>
+
+     <div class="form-actions">
+      <button class="btn" type="submit">
+       Add Patient
+      </button>
+     </div>
     </form>
    </div>
    <!-- Patient Log Section -->
@@ -309,25 +322,6 @@
          </span>
         </label>
         <input id="editPatientNumber" name="patient_number" required="" type="text"/>
-       </div>
-       <div class="form-group">
-        <label for="editSession">
-         Session
-         <span class="required">
-          *
-         </span>
-        </label>
-        <select id="editSession" name="session" required="">
-         <option value="">
-          Select Session
-         </option>
-         <option value="AM">
-          AM Session
-         </option>
-         <option value="PM">
-          PM Session
-         </option>
-        </select>
        </div>
       </div>
       <div class="form-row-2">
