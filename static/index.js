@@ -887,6 +887,9 @@
         // Show Sheet Modal (Attendance/Appointment)
         async function showSheetModal(patientId, sheetType) {
             try {
+                // Close the main modal first to avoid stacking
+                document.getElementById('mainModal').style.display = 'none';
+                
                 const resp = await authenticatedFetch(`${API_BASE}/patients/${patientId}/services?sheet_type=${sheetType}`);
                 let entriesHtml = '';
                 if (resp && resp.ok) {
@@ -933,7 +936,7 @@
                 // Add a back button to return to patient view
                 const backBtn = `<button class='btn btn-small' id='backToPatientBtn' style='margin-bottom:15px;'>&larr; Back to Patient</button>`;
                 
-                // Use the dedicated sheet modal instead of the main modal
+                // Use the dedicated sheet modal
                 const sheetModal = document.getElementById('sheetModal');
                 const sheetModalTitle = document.getElementById('sheetModalTitle');
                 const sheetEntriesContainer = document.getElementById('sheetEntriesContainer');
@@ -945,7 +948,7 @@
                 // Attach back button event
                 document.getElementById('backToPatientBtn').onclick = function() {
                     closeSheetModal();
-                    viewPatient(patientId);
+                    viewPatient(patientId); // Reopen patient modal
                 };
             } catch (error) {
                 showModal('Error', 'Failed to load sheet entries.');
