@@ -1003,22 +1003,141 @@
             box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
         }
 
-        /* Responsive adjustments */
+        /* Patients Table Styles */
+        .patients-table-container {
+            margin-top: 20px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .patients-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .patients-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .patients-table th {
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .patients-table th:first-child {
+            width: 15%;
+        }
+
+        .patients-table th:nth-child(2) {
+            width: 35%;
+        }
+
+        .patients-table th:nth-child(3) {
+            width: 25%;
+        }
+
+        .patients-table th:last-child {
+            width: 25%;
+            text-align: center;
+        }
+
+        .patients-table tbody tr {
+            border-bottom: 1px solid #e8e8e8;
+            transition: background-color 0.2s ease;
+        }
+
+        .patients-table tbody tr:hover {
+            background-color: #f8f9ff;
+        }
+
+        .patients-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .patients-table td {
+            padding: 16px 20px;
+            vertical-align: middle;
+        }
+
+        .patient-id {
+            font-weight: 600;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+        }
+
+        .patient-name-cell {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .patient-phone {
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+
+        .patient-actions {
+            text-align: center;
+        }
+
+        .patient-actions .btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            min-width: 80px;
+        }
+
+        .no-patients {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            font-style: italic;
+            background: white;
+            border-radius: 12px;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Responsive table */
         @media (max-width: 768px) {
-            .patient-view-header {
-                flex-direction: column;
-                text-align: center;
+            .patients-table-container {
+                overflow-x: auto;
             }
+            
+            .patients-table {
+                min-width: 600px;
+            }
+            
+            .patients-table th,
+            .patients-table td {
+                padding: 12px 16px;
+            }
+        }
 
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
+        /* Phone number styling for better visual appeal */
+        .patients-table td:nth-child(3) {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+            font-weight: 500;
+            letter-spacing: 1px;
+            color: #4a5568;
+            font-size: 13px;
+            background-color: #f8fafc;
+            border-radius: 6px;
+            padding: 8px 12px !important;
+        }
 
-            .codes-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .action-buttons {
-                flex-direction: column;
-            }
+        /* Hover effect for phone numbers */
+        .patients-table tr:hover td:nth-child(3) {
+            background-color: #e2e8f0;
+            color: #2d3748;
+            transition: all 0.2s ease;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }

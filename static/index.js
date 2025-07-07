@@ -561,22 +561,46 @@
             const container = document.getElementById('patientsContainer');
             
             if (patients.length === 0) {
-                container.innerHTML = '<p>No patients found</p>';
+                container.innerHTML = '<div class="no-patients">No patients found.</div>';
                 return;
             }
             
-            container.innerHTML = patients.map(patient => `
-                <div class="patient-card">
-                    <div class="patient-number">Patient #${patient.patient_number}</div>
-                    <div class="patient-name">${patient.first_name} ${patient.last_name}</div>
-                    <div class="patient-details">
-                        ${patient.phone ? `<strong>Phone:</strong> ${patient.phone}<br />` : '<strong>Phone:</strong> Not provided<br />'}
-                    </div>
-                    <div style="margin-top: 15px;">
-                        <button class="btn btn-small" onclick="viewPatient(${patient.id})" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">View</button>
-                    </div>
-                </div>
-            `).join('');
+            // Create table structure
+            let html = `
+                <table class="patients-table">
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Phone Number</th>
+                            <th>Info</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            patients.forEach(patient => {
+                const phone = patient.phone || 'Not provided';
+                html += `
+                    <tr class="patient-row">
+                        <td class="patient-id">${patient.patient_number}</td>
+                        <td class="patient-name-cell">${patient.first_name} ${patient.last_name}</td>
+                        <td class="patient-phone">${phone}</td>
+                        <td class="patient-actions">
+                            <button class="btn btn-primary btn-small" onclick="viewPatient(${patient.id})">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = html;
         }
 
         // Search Patients
