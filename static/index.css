@@ -1141,3 +1141,103 @@
             transform: translateY(-1px);
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+
+        .section-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        /* Authorization Cards Styling */
+        .authorizations-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .authorization-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: 1px solid #e5e5e5;
+        }
+
+        .authorization-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .auth-header {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .auth-header h4 {
+            margin: 0;
+            font-size: 16px;
+            color: #444;
+            font-weight: 600;
+        }
+
+        .auth-actions button {
+            margin-left: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .auth-details {
+            padding: 15px;
+        }
+
+        .auth-item {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .auth-item label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .auth-item span {
+            color: #333;
+        }
+
+        .no-authorizations {
+            padding: 20px;
+            text-align: center;
+            background: #f9f9f9;
+            border-radius: 8px;
+            color: #666;
+        }
+
+        .error-message {
+            padding: 15px;
+            background-color: #fee;
+            border-left: 4px solid #e55;
+            color: #800;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .add-auth-btn {
+            font-size: 12px;
+            padding: 3px 8px;
+            background-color: #6c8eef;
+            color: white;
+            border: none;
+        }
+
+        .authorization-form {
+            padding: 10px 5px;
+        }

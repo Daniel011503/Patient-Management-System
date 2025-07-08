@@ -117,15 +117,23 @@
                 return null;
             }
 
-            const defaultOptions = {
+            // Make sure we don't lose headers when merging options
+            const mergedOptions = {
+                ...options,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`,
-                    ...options.headers
+                    ...(options.headers || {})
                 }
             };
             
-            const response = await fetch(url, { ...defaultOptions, ...options });
+            // Debug logging
+            console.log(`🔄 API Request: ${options.method || 'GET'} ${url}`);
+            if (options.body) {
+                console.log(`📦 Request Body: ${options.body}`);
+            }
+            
+            const response = await fetch(url, mergedOptions);
             
             if (response.status === 401) {
                 console.log('❌ Token expired or invalid, redirecting to login');
@@ -745,28 +753,12 @@
                                 <h3 class="section-title">
                                     <span class="section-icon">🔒</span>
                                     Authorization Details
+                                    <button class="btn btn-small add-auth-btn" onclick="showAddAuthorizationModal(${patient.id})" style="float:right;margin-top:-5px;">
+                                        <span class="btn-icon">+</span> Add New
+                                    </button>
                                 </h3>
-                                <div class="info-grid">
-                                    <div class="info-item">
-                                        <label>Authorization Number</label>
-                                        <span>${patient.auth_number || 'Not provided'}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Units</label>
-                                        <span>${patient.auth_units || 'Not provided'}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Start Date</label>
-                                        <span>${patient.auth_start_date ? formatDateString(patient.auth_start_date) : 'Not provided'}</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <label>End Date</label>
-                                        <span>${patient.auth_end_date ? formatDateString(patient.auth_end_date) : 'Not provided'}</span>
-                                    </div>
-                                    <div class="info-item full-width">
-                                        <label>Diagnosis Code</label>
-                                        <span>${patient.auth_diagnosis_code || 'Not provided'}</span>
-                                    </div>
+                                <div id="authorizationsContainer">
+                                    <p>Loading authorizations...</p>
                                 </div>
                             </div>
 
@@ -855,6 +847,9 @@
 
                     // Use setTimeout to ensure modal content is rendered before attaching listeners
                     setTimeout(() => {
+                        // Load patient authorizations
+                        loadPatientAuthorizations(patientId);
+
                         // Attach event listeners for Attendance/Appointment Sheet buttons
                         const attendanceBtn = document.querySelector('.attendance-sheet-btn');
                         const appointmentBtn = document.querySelector('.appointment-sheet-btn');
@@ -1092,11 +1087,23 @@
             const modalTitle = document.getElementById('mainModalTitle');
             const modalBody = document.getElementById('mainModalBody');
             modalTitle.textContent = title;
+            
+            // Clear previous content first
+            modalBody.innerHTML = '';
+            
+            // Insert new content
             modalBody.innerHTML = content;
             modal.style.display = 'block';
             
             // Ensure modal has the right z-index (below alerts)
             modal.style.zIndex = '2000';
+            
+            // Log the modal content to ensure it's being rendered correctly
+            console.log("Modal content set:", {
+                title: title,
+                contentLength: content.length,
+                firstFormElement: modalBody.querySelector('form') ? modalBody.querySelector('form').id : 'no form found'
+            });
             
             // Make sure the mainAlert container is moved to be a direct child of body
             // This ensures it's not affected by stacking contexts
@@ -2106,3 +2113,460 @@
         // Make functions globally available
         window.showAlert = showAlert;
         window.ensureAlertVisibility = ensureAlertVisibility;
+
+        // Authorization Management Functions
+        async function loadPatientAuthorizations(patientId) {
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}/authorizations`);
+                
+                if (response && response.ok) {
+                    const authorizations = await response.json();
+                    
+                    // Debug logging
+                    console.log('🔍 LOADED AUTHORIZATIONS FROM SERVER:');
+                    authorizations.forEach((auth, index) => {
+                        console.log(`  Authorization ${index + 1}:`);
+                        console.log(`    ID: ${auth.id}`);
+                        console.log(`    Auth Number: "${auth.auth_number}" (type: ${typeof auth.auth_number})`);
+                        console.log(`    Auth Diagnosis Code: "${auth.auth_diagnosis_code}" (type: ${typeof auth.auth_diagnosis_code})`);
+                        console.log(`    Full object:`, auth);
+                    });
+                    
+                    const container = document.getElementById('authorizationsContainer');
+                    
+                    if (!container) {
+                        console.error('Authorization container not found');
+                        return;
+                    }
+                    
+                    if (authorizations.length === 0) {
+                        container.innerHTML = `
+                            <div class="no-authorizations">
+                                <p>No authorization records found. Click "Add New" to create one.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    let html = `<div class="authorizations-list">`;
+                    
+                    authorizations.forEach(auth => {
+                        // Improved handling of auth_number display
+                        const authNumberDisplay = (auth.auth_number !== null && auth.auth_number !== undefined) 
+                            ? auth.auth_number.toString()
+                            : 'Not set';
+                        
+                        // Improved handling of diagnosis code display
+                        const diagnosisCodeDisplay = (auth.auth_diagnosis_code && auth.auth_diagnosis_code.trim() !== '') 
+                            ? auth.auth_diagnosis_code.trim()
+                            : 'Not set';
+                        
+                        html += `
+                            <div class="authorization-card">
+                                <div class="auth-header">
+                                    <h4>Auth #: ${authNumberDisplay}</h4>
+                                    <div class="auth-actions">
+                                        <button class="btn btn-small" onclick="editAuthorization(${auth.id})">Edit</button>
+                                        <button class="btn btn-small btn-danger" onclick="deleteAuthorization(${auth.id}, ${patientId})">Delete</button>
+                                    </div>
+                                </div>
+                                <div class="auth-details">
+                                    <div class="auth-item">
+                                        <label>Units:</label>
+                                        <span>${auth.auth_units || 1}</span>
+                                    </div>
+                                    <div class="auth-item">
+                                        <label>Start Date:</label>
+                                        <span>${formatDateString(auth.auth_start_date)}</span>
+                                    </div>
+                                    <div class="auth-item">
+                                        <label>End Date:</label>
+                                        <span>${formatDateString(auth.auth_end_date)}</span>
+                                    </div>
+                                    <div class="auth-item">
+                                        <label>Diagnosis Code:</label>
+                                        <span>${diagnosisCodeDisplay}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `</div>`;
+                    container.innerHTML = html;
+                } else {
+                    console.error('Failed to load authorizations');
+                    document.getElementById('authorizationsContainer').innerHTML = 
+                        `<div class="error-message">Failed to load authorizations. Please try again.</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading authorizations:', error);
+                document.getElementById('authorizationsContainer').innerHTML = 
+                    `<div class="error-message">Error loading authorizations: ${error.message}</div>`;
+            }
+        }
+
+        function showAddAuthorizationModal(patientId) {
+            // Create the form with an explicitly set auth_number field
+            const modalContent = `
+                <form id="authorizationForm" class="authorization-form">
+                    <input type="hidden" id="authPatientId" name="patientId" value="${patientId}">
+                    
+                    <div class="form-group">
+                        <label for="authNumber">Authorization Number</label>
+                        <input id="authNumber" name="auth_number" type="number" autocomplete="off"
+                               placeholder="Enter authorization number (integer only)" 
+                               min="1" step="1">
+                    </div>
+                    
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="authUnits">Units</label>
+                            <input id="authUnits" name="auth_units" type="number" value="1" max="9999"
+                                oninput="if(this.value.length > 4) this.value = this.value.slice(0,4)">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="authDiagnosisCode">Diagnosis Code</label>
+                            <input id="authDiagnosisCode" name="auth_diagnosis_code" type="text" autocomplete="off">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="authStartDate">Start Date</label>
+                            <input id="authStartDate" name="auth_start_date" type="date">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="authEndDate">End Date</label>
+                            <input id="authEndDate" name="auth_end_date" type="date">
+                        </div>
+                    </div>
+                    
+                    <div id="authFormAlert" style="margin-top:10px;"></div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn">Save Authorization</button>
+                        <button type="button" class="btn" onclick="document.getElementById('mainModal').style.display = 'none';">Cancel</button>
+                    </div>
+                </form>
+            `;
+            
+            // Reset modal completely
+            const mainModal = document.getElementById('mainModal');
+            const modalTitle = document.getElementById('mainModalTitle');
+            const modalBody = document.getElementById('mainModalBody');
+            
+            // Clear everything
+            modalBody.innerHTML = '';
+            
+            // Set modal content
+            modalTitle.textContent = 'Add Authorization';
+            modalBody.innerHTML = modalContent;
+            
+            // Get today's date for defaults
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Show modal and then set values after rendering
+            mainModal.style.display = 'block';
+            
+            // Find the form and fields
+            const form = document.getElementById('authorizationForm');
+            const authNumberField = document.getElementById('authNumber');
+            const diagnosisCodeField = document.getElementById('authDiagnosisCode');
+            const startDateField = document.getElementById('authStartDate');
+            const endDateField = document.getElementById('authEndDate');
+            const unitsField = document.getElementById('authUnits');
+            
+            // Set initial field values
+            if (authNumberField) {
+                authNumberField.value = '';
+                setTimeout(() => authNumberField.focus(), 100);
+            }
+            
+            if (diagnosisCodeField) {
+                diagnosisCodeField.value = '';
+            }
+
+            if (startDateField) startDateField.value = today;
+            if (endDateField) endDateField.value = today;
+            if (unitsField) unitsField.value = '1';
+            
+            // Add submit handler to the form directly (no cloning)
+            if (form) {
+                // Remove any existing event listeners by replacing the form's onsubmit
+                form.onsubmit = null;
+                
+                // Add the submit handler directly
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault(); // Prevent default form submission
+                    
+                    console.log(`🚨 FORM SUBMISSION STARTED`);
+                    
+                    // Use FormData like the Add Patient form does - this should capture all form values
+                    const formData = new FormData(this);
+                    const authData = {};
+                    
+                    console.log(`📝 FormData entries:`);
+                    for (let [key, value] of formData.entries()) {
+                        console.log(`  ${key}: "${value}"`);
+                        if (value.trim() !== '') {
+                            authData[key] = value;
+                        }
+                    }
+                    
+                    // Get patient ID from hidden field
+                    const patientId = formData.get('patientId') || document.getElementById('authPatientId').value;
+                    
+                    console.log(`� Captured form data:`, authData);
+                    console.log(`👤 Patient ID: "${patientId}"`);
+                    
+                    // Validate required fields
+                    if (!authData.auth_number && !authData.auth_diagnosis_code) {
+                        console.log(`⚠️ Both Auth Number and Diagnosis Code are empty!`);
+                    }
+                    
+                    // Submit the authorization directly here instead of calling separate function
+                    try {
+                        // Helper function for date formatting
+                        function formatDateForAPI(dateString) {
+                            if (!dateString) return null;
+                            return dateString.split('T')[0]; // Ensure YYYY-MM-DD format
+                        }
+                        
+                        // Build the data object from FormData
+                        let authNumberValue = null;
+                        if (authData.auth_number && authData.auth_number !== '') {
+                            const parsedAuthNumber = parseInt(authData.auth_number);
+                            if (!isNaN(parsedAuthNumber)) {
+                                authNumberValue = parsedAuthNumber;
+                            }
+                        }
+                        
+                        const data = {
+                            auth_number: authNumberValue,
+                            auth_units: authData.auth_units ? parseInt(authData.auth_units) : 1,
+                            auth_diagnosis_code: authData.auth_diagnosis_code || null,
+                            auth_start_date: authData.auth_start_date ? formatDateForAPI(authData.auth_start_date) : null,
+                            auth_end_date: authData.auth_end_date ? formatDateForAPI(authData.auth_end_date) : null
+                        };
+                        
+                        console.log(`📤 Sending data:`, data);
+                        
+                        const response = await authenticatedFetch(`${API_BASE}/patients/${patientId}/authorizations`, {
+                            method: 'POST',
+                            body: JSON.stringify(data)
+                        });
+                        
+                        if (response && response.ok) {
+                            const createdAuth = await response.json();
+                            console.log('✅ Authorization created successfully:', createdAuth);
+                            
+                            document.getElementById('mainModal').style.display = 'none';
+                            showAlert('mainAlert', 'Authorization added successfully!', 'success');
+                            
+                            // Refresh patient view to show new authorization
+                            viewPatient(patientId);
+                        } else if (response) {
+                            const error = await response.json();
+                            console.error('❌ Authorization validation error:', error);
+                            let errorMsg = 'Failed to add authorization';
+                            
+                            if (error.detail) {
+                                if (Array.isArray(error.detail)) {
+                                    errorMsg = error.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join('<br>');
+                                } else {
+                                    errorMsg = error.detail;
+                                }
+                            }
+                            
+                            showAlert('authFormAlert', `Error: ${errorMsg}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error adding authorization:', error);
+                        showAlert('authFormAlert', `Error: ${error.message || 'Failed to add authorization'}`, 'error');
+                    }
+                });
+                
+                console.log('Form submit handler attached directly');
+            } else {
+                console.error('AUTHORIZATION FORM NOT FOUND IN DOM');
+            }
+        }
+
+        async function editAuthorization(authorizationId) {
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/authorizations/${authorizationId}`);
+                
+                if (response && response.ok) {
+                    const authorization = await response.json();
+                    
+                    const modalContent = `
+                        <form id="editAuthorizationForm" class="authorization-form">
+                            <input type="hidden" id="editAuthId" value="${authorization.id}">
+                            <input type="hidden" id="editAuthPatientId" value="${authorization.patient_id}">
+                            
+                            <div class="form-group">
+                                <label for="editAuthNumber">Authorization Number</label>
+                                <input id="editAuthNumber" name="auth_number" type="number" 
+                                       value="${authorization.auth_number || ''}"
+                                       placeholder="Enter authorization number (integer only)" 
+                                       min="1" step="1">
+                            </div>
+                            
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="editAuthUnits">Units <span class="required">*</span></label>
+                                    <input id="editAuthUnits" name="auth_units" type="number" max="9999" 
+                                        value="${authorization.auth_units}" required
+                                        oninput="if(this.value.length > 4) this.value = this.value.slice(0,4)">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="editAuthDiagnosisCode">Diagnosis Code</label>
+                                    <input id="editAuthDiagnosisCode" name="auth_diagnosis_code" 
+                                        value="${authorization.auth_diagnosis_code || ''}">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="editAuthStartDate">Start Date <span class="required">*</span></label>
+                                    <input id="editAuthStartDate" name="auth_start_date" type="date" 
+                                        value="${authorization.auth_start_date.split('T')[0]}" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="editAuthEndDate">End Date <span class="required">*</span></label>
+                                    <input id="editAuthEndDate" name="auth_end_date" type="date" 
+                                        value="${authorization.auth_end_date.split('T')[0]}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn">Update Authorization</button>
+                                <button type="button" class="btn" onclick="document.getElementById('mainModal').style.display = 'none';">Cancel</button>
+                            </div>
+                            
+                            <div id="editAuthFormAlert" style="margin-top:10px;"></div>
+                        </form>
+                    `;
+                    
+                    showModal('Edit Authorization', modalContent);
+                    
+                    // Add submit handler with a delay to ensure DOM is ready
+                    setTimeout(() => {
+                        try {
+                            const editForm = document.getElementById('editAuthorizationForm');
+                            if (editForm) {
+                                console.log('Edit authorization form found, attaching submit handler');
+                                editForm.addEventListener('submit', async function(e) {
+                                    e.preventDefault();
+                                    await updateAuthorization();
+                                });
+                            } else {
+                                console.error('Could not find edit authorization form in the DOM');
+                            }
+                        } catch (e) {
+                            console.error('Error attaching edit form submit handler:', e);
+                        }
+                    }, 300);
+                } else {
+                    showAlert('mainAlert', 'Failed to load authorization details.', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading authorization:', error);
+                showAlert('mainAlert', `Error: ${error.message || 'Failed to load authorization'}`, 'error');
+            }
+        }
+
+        async function updateAuthorization() {
+            try {
+                const authId = document.getElementById('editAuthId').value;
+                const patientId = document.getElementById('editAuthPatientId').value;
+                const authNumber = document.getElementById('editAuthNumber').value;
+                const authUnits = document.getElementById('editAuthUnits').value;
+                const authDiagnosisCode = document.getElementById('editAuthDiagnosisCode').value;
+                const authStartDate = document.getElementById('editAuthStartDate').value;
+                const authEndDate = document.getElementById('editAuthEndDate').value;
+                
+                // Helper function for date formatting
+                function formatDateForAPI(dateString) {
+                    if (!dateString) return null;
+                    return dateString.split('T')[0]; // Ensure YYYY-MM-DD format
+                }
+                
+                // No validation needed for auth_number - it's optional and integer-only
+                
+                if (!authUnits || isNaN(parseInt(authUnits))) {
+                    showAlert('editAuthFormAlert', 'Units must be a valid number', 'error');
+                    return;
+                }
+                
+                if (!authStartDate) {
+                    showAlert('editAuthFormAlert', 'Start Date is required', 'error');
+                    return;
+                }
+                
+                if (!authEndDate) {
+                    showAlert('editAuthFormAlert', 'End Date is required', 'error');
+                    return;
+                }
+                
+                const data = {
+                    auth_number: authNumber.trim() !== '' ? parseInt(authNumber.trim()) : null, // Convert to integer
+                    auth_units: parseInt(authUnits),
+                    auth_diagnosis_code: authDiagnosisCode.trim() || null,
+                    auth_start_date: formatDateForAPI(authStartDate),
+                    auth_end_date: formatDateForAPI(authEndDate)
+                };
+                
+                const response = await authenticatedFetch(`${API_BASE}/authorizations/${authId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(data)
+                });
+                
+                if (response && response.ok) {
+                    document.getElementById('mainModal').style.display = 'none';
+                    showAlert('mainAlert', 'Authorization updated successfully!', 'success');
+                    
+                    // Refresh patient view to show updated authorization
+                    viewPatient(patientId);
+                } else if (response) {
+                    const error = await response.json();
+                    showAlert('editAuthFormAlert', `Error: ${error.detail || 'Failed to update authorization'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating authorization:', error);
+                showAlert('editAuthFormAlert', `Error: ${error.message || 'Failed to update authorization'}`, 'error');
+            }
+        }
+
+        async function deleteAuthorization(authorizationId, patientId) {
+            if (!confirm('Are you sure you want to delete this authorization?')) return;
+            
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/authorizations/${authorizationId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response && response.ok) {
+                    showAlert('mainAlert', 'Authorization deleted successfully!', 'success');
+                    
+                    // Refresh patient view to update authorizations list
+                    loadPatientAuthorizations(patientId);
+                } else if (response) {
+                    const error = await response.json();
+                    showAlert('mainAlert', `Error: ${error.detail || 'Failed to delete authorization'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting authorization:', error);
+                showAlert('mainAlert', `Error: ${error.message || 'Failed to delete authorization'}`, 'error');
+            }
+        }
+        
+        // Make authorization functions available globally
+        window.showAddAuthorizationModal = showAddAuthorizationModal;
+        window.editAuthorization = editAuthorization;
+        window.deleteAuthorization = deleteAuthorization;

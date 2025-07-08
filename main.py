@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, extract
 from datetime import datetime, timedelta, date
+from pydantic import ValidationError
 import models
 import schemas
 import crud
@@ -676,6 +677,155 @@ def add_recurring_service_entry(
             status_code=500, 
             detail=f"Error creating recurring appointments: {str(e)}"
         )
+
+# Authorization Endpoints
+@app.get("/patients/{patient_id}/authorizations", response_model=list[schemas.Authorization])
+def get_patient_authorizations(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get all authorizations for a patient"""
+    db_patient = crud.get_patient(db, patient_id=patient_id)
+    if db_patient is None:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return crud.get_authorizations(db, patient_id=patient_id)
+
+@app.post("/patients/{patient_id}/authorizations", response_model=schemas.Authorization)
+def create_patient_authorization(
+    patient_id: int,
+    authorization: schemas.AuthorizationCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Create a new authorization for a patient"""
+    print(f"🔍 POST /patients/{patient_id}/authorizations - Request received!")
+    logger.info(f"POST /patients/{patient_id}/authorizations - Request received!")
+    
+    db_patient = crud.get_patient(db, patient_id=patient_id)
+    if db_patient is None:
+        print(f"❌ Patient {patient_id} not found!")
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    try:
+        # Enhanced debug logging
+        auth_data = authorization.dict()
+        auth_number_value = auth_data.get('auth_number', '')
+        
+        logger.info(f"Creating authorization for patient {patient_id}: {auth_data}")
+        print(f"🔍 Creating authorization: patient={patient_id}")
+        print(f"🔍 Auth Number from dict: '{auth_number_value}' (type: {type(auth_number_value)})")
+        print(f"🔍 Units: {auth_data.get('auth_units', 'Not provided')}")
+        print(f"🔍 FULL INCOMING AUTH DATA: {auth_data}")
+        
+        # Auth number is now optional - no validation needed
+        auth_number = getattr(authorization, "auth_number", None)
+        
+        # Just log the auth_number attribute for debugging
+        print(f"🔍 Auth Number from attribute: '{auth_number}' (type: {type(auth_number)})")
+        print(f"🔍 Auth Number is None: {auth_number is None}")
+        print(f"🔍 Auth Number == None: {auth_number == None}")
+        
+        # No validation needed since auth_number is now optional
+        # If auth_number is provided, ensure it's an integer
+        if auth_number is not None:
+            try:
+                # Convert to integer if it's not already
+                final_auth_number = int(auth_number)
+                authorization.auth_number = final_auth_number
+                print(f"✅ Converted auth number to integer: {authorization.auth_number}")
+            except (ValueError, TypeError):
+                print(f"❌ Failed to convert auth number '{auth_number}' to integer")
+                raise HTTPException(
+                    status_code=422,
+                    detail="Authorization Number must be a valid integer"
+                )
+        else:
+            print(f"⚠️ Auth number is None, keeping as null")
+            
+        # Set default values for missing fields (start/end date if not provided)
+        if not authorization.auth_start_date:
+            authorization.auth_start_date = date.today()
+        if not authorization.auth_end_date:
+            # Default to one year from start date
+            if authorization.auth_start_date:
+                authorization.auth_end_date = authorization.auth_start_date.replace(year=authorization.auth_start_date.year + 1)
+            else:
+                authorization.auth_end_date = date.today().replace(year=date.today().year + 1)
+        
+        # Create the authorization
+        created_auth = crud.create_authorization(db, patient_id=patient_id, authorization=authorization)
+        
+        # Debug what was actually saved
+        print(f"🔍 Created authorization in DB:")
+        print(f"🔍   ID: {created_auth.id}")
+        print(f"🔍   Auth Number: {created_auth.auth_number} (type: {type(created_auth.auth_number)})")
+        print(f"🔍   Patient ID: {created_auth.patient_id}")
+        print(f"🔍   Units: {created_auth.auth_units}")
+        
+        return created_auth
+    except ValidationError as ve:
+        logger.error(f"Validation error creating authorization: {str(ve)}")
+        raise HTTPException(status_code=422, detail=f"Validation error: {str(ve)}")
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
+    except Exception as e:
+        logger.error(f"Error creating authorization: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating authorization: {str(e)}")
+
+@app.get("/authorizations/{authorization_id}", response_model=schemas.Authorization)
+def get_authorization(
+    authorization_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Get a specific authorization by ID"""
+    db_authorization = crud.get_authorization(db, authorization_id=authorization_id)
+    if db_authorization is None:
+        raise HTTPException(status_code=404, detail="Authorization not found")
+    return db_authorization
+
+@app.put("/authorizations/{authorization_id}", response_model=schemas.Authorization)
+def update_authorization(
+    authorization_id: int,
+    authorization: schemas.AuthorizationUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Update an existing authorization"""
+    db_authorization = crud.get_authorization(db, authorization_id=authorization_id)
+    if db_authorization is None:
+        raise HTTPException(status_code=404, detail="Authorization not found")
+    
+    # No validation needed for auth_number - it's now optional
+    # If auth_number is provided, ensure it's an integer
+    if hasattr(authorization, 'auth_number') and authorization.auth_number is not None:
+        try:
+            # Convert to integer if it's not already
+            authorization.auth_number = int(authorization.auth_number)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=422,
+                detail="Authorization Number must be a valid integer"
+            )
+            
+    return crud.update_authorization(db, authorization_id=authorization_id, authorization=authorization)
+
+@app.delete("/authorizations/{authorization_id}")
+def delete_authorization(
+    authorization_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Delete an authorization"""
+    db_authorization = crud.get_authorization(db, authorization_id=authorization_id)
+    if db_authorization is None:
+        raise HTTPException(status_code=404, detail="Authorization not found")
+    
+    if crud.delete_authorization(db, authorization_id=authorization_id):
+        return {"message": "Authorization deleted successfully"}
+    
+    raise HTTPException(status_code=500, detail="Failed to delete authorization")
 
 if __name__ == "__main__":
     import uvicorn

@@ -257,3 +257,40 @@ def get_appointment_services(db: Session, patient_id: int = None, service_type: 
         query = query.filter(models.Service.service_type == service_type)
     
     return query.order_by(models.Service.service_date, models.Service.service_time).all()
+
+# Authorization CRUD functions
+def get_authorizations(db: Session, patient_id: int):
+    """Get all authorizations for a patient"""
+    return db.query(models.Authorization).filter(models.Authorization.patient_id == patient_id).all()
+
+def get_authorization(db: Session, authorization_id: int):
+    """Get a specific authorization by ID"""
+    return db.query(models.Authorization).filter(models.Authorization.id == authorization_id).first()
+
+def create_authorization(db: Session, patient_id: int, authorization: schemas.AuthorizationCreate):
+    """Create a new authorization for a patient"""
+    db_authorization = models.Authorization(**authorization.dict(), patient_id=patient_id)
+    db.add(db_authorization)
+    db.commit()
+    db.refresh(db_authorization)
+    return db_authorization
+
+def update_authorization(db: Session, authorization_id: int, authorization: schemas.AuthorizationUpdate):
+    """Update an existing authorization"""
+    db_authorization = db.query(models.Authorization).filter(models.Authorization.id == authorization_id).first()
+    if db_authorization:
+        update_data = authorization.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_authorization, field, value)
+        db.commit()
+        db.refresh(db_authorization)
+    return db_authorization
+
+def delete_authorization(db: Session, authorization_id: int):
+    """Delete an authorization"""
+    db_authorization = db.query(models.Authorization).filter(models.Authorization.id == authorization_id).first()
+    if db_authorization:
+        db.delete(db_authorization)
+        db.commit()
+        return True
+    return False

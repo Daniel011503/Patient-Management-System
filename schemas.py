@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from datetime import datetime, date
 from typing import Optional, List
 
@@ -44,7 +44,56 @@ class Patient(PatientBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    authorizations: Optional[List["Authorization"]] = []
 
+    class Config:
+        from_attributes = True
+
+# Authorization Schemas
+class AuthorizationBase(BaseModel):
+    # Make auth_number optional and integer type
+    auth_number: Optional[int] = Field(default=None, description="Authorization number (optional, must be integer)")
+    auth_units: Optional[int] = Field(default=1)
+    auth_start_date: Optional[date] = None
+    auth_end_date: Optional[date] = None
+    auth_diagnosis_code: Optional[str] = None
+    
+    # Validator to ensure auth_number is an integer if provided
+    @validator('auth_number', pre=True)
+    def validate_auth_number(cls, v):
+        # If value is None or already an int, return it
+        if v is None:
+            return None
+            
+        # If it's an empty string, convert to None
+        if isinstance(v, str) and v.strip() == '':
+            return None
+            
+        # Try to convert to integer
+        try:
+            if isinstance(v, str):
+                v = v.strip()
+            return int(v)
+        except (ValueError, TypeError):
+            raise ValueError('Authorization Number must be a valid integer')
+
+class AuthorizationCreate(AuthorizationBase):
+    # Only auth_number is required, others are optional
+    pass
+
+class AuthorizationUpdate(AuthorizationBase):
+    # Make all fields optional for updates
+    auth_number: Optional[int] = None
+    auth_units: Optional[int] = None
+    auth_start_date: Optional[date] = None
+    auth_end_date: Optional[date] = None
+
+class Authorization(AuthorizationBase):
+    id: int
+    patient_id: int
+    created_at: datetime
+    updated_at: datetime
+    
     class Config:
         from_attributes = True
 

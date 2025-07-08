@@ -76,3 +76,19 @@ class Service(Base):
     recurring_end_date = Column(Date, nullable=True)  # End date for recurring series
     parent_service_id = Column(Integer, ForeignKey("services.id", ondelete="SET NULL"), nullable=True)  # Parent service for recurring series
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Authorization(Base):
+    __tablename__ = "authorizations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patients.id", ondelete="CASCADE"), nullable=False)
+    auth_number = Column(Integer, nullable=True)  # Now Integer type and optional
+    auth_units = Column(Integer, nullable=True, default=1)
+    auth_start_date = Column(Date, nullable=True)
+    auth_end_date = Column(Date, nullable=True)
+    auth_diagnosis_code = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to patient
+    patient = relationship("Patient", backref=backref("authorizations", cascade="all, delete-orphan"))
