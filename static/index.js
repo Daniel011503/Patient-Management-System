@@ -740,6 +740,36 @@
                                 </div>
                             </div>
 
+                            <!-- Authorization Details Section -->
+                            <div class="info-section">
+                                <h3 class="section-title">
+                                    <span class="section-icon">🔒</span>
+                                    Authorization Details
+                                </h3>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <label>Authorization Number</label>
+                                        <span>${patient.auth_number || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Units</label>
+                                        <span>${patient.auth_units || 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Start Date</label>
+                                        <span>${patient.auth_start_date ? formatDateString(patient.auth_start_date) : 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>End Date</label>
+                                        <span>${patient.auth_end_date ? formatDateString(patient.auth_end_date) : 'Not provided'}</span>
+                                    </div>
+                                    <div class="info-item full-width">
+                                        <label>Diagnosis Code</label>
+                                        <span>${patient.auth_diagnosis_code || 'Not provided'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Treatment Information Section -->
                             <div class="info-section">
                                 <h3 class="section-title">
@@ -1388,6 +1418,35 @@
                                         <label>Authorization</label>
                                         <input name='authorization' value='${patient.authorization || ''}' />
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Authorization Section -->
+                            <div class='form-section'>
+                                <h3 class='section-title'>Authorization Details</h3>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>Authorization Number</label>
+                                        <input name='auth_number' value='${patient.auth_number || ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>Units (max 4 digits)</label>
+                                        <input name='auth_units' value='${patient.auth_units || ''}' type='number' max='9999' oninput="if(this.value.length > 4) this.value = this.value.slice(0,4)" />
+                                    </div>
+                                </div>
+                                <div class='form-row-2'>
+                                    <div class='form-group'>
+                                        <label>Start Date</label>
+                                        <input name='auth_start_date' type='date' value='${patient.auth_start_date ? patient.auth_start_date.split('T')[0] : ''}' />
+                                    </div>
+                                    <div class='form-group'>
+                                        <label>End Date</label>
+                                        <input name='auth_end_date' type='date' value='${patient.auth_end_date ? patient.auth_end_date.split('T')[0] : ''}' />
+                                    </div>
+                                </div>
+                                <div class='form-group'>
+                                    <label>Diagnosis Code</label>
+                                    <input name='auth_diagnosis_code' value='${patient.auth_diagnosis_code || ''}' />
                                 </div>
                             </div>
 

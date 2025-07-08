@@ -22,6 +22,11 @@ class Patient(Base):
     referal = Column(String)
     psr_date = Column(Date)
     authorization = Column(String)
+    auth_number = Column(String)  # New authorization fields
+    auth_units = Column(Integer)
+    auth_start_date = Column(Date)
+    auth_end_date = Column(Date)
+    auth_diagnosis_code = Column(String)
     diagnosis = Column(Text)
     start_date = Column(Date)
     end_date = Column(Date)

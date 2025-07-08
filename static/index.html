@@ -189,6 +189,45 @@
       </div>
      </div>
 
+     <!-- Authorization Details Section -->
+     <div class="form-section">
+      <h3 class="section-title">Authorization Details</h3>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="authNumber">
+         Authorization Number
+        </label>
+        <input id="authNumber" name="auth_number" type="text"/>
+       </div>
+       <div class="form-group">
+        <label for="authUnits">
+         Units (max 4 digits)
+        </label>
+        <input id="authUnits" name="auth_units" type="number" max="9999" oninput="if(this.value.length > 4) this.value = this.value.slice(0,4)"/>
+       </div>
+      </div>
+      <div class="form-row-2">
+       <div class="form-group">
+        <label for="authStartDate">
+         Start Date
+        </label>
+        <input id="authStartDate" name="auth_start_date" type="date"/>
+       </div>
+       <div class="form-group">
+        <label for="authEndDate">
+         End Date
+        </label>
+        <input id="authEndDate" name="auth_end_date" type="date"/>
+       </div>
+      </div>
+      <div class="form-group">
+       <label for="authDiagnosisCode">
+         Diagnosis Code
+        </label>
+        <input id="authDiagnosisCode" name="auth_diagnosis_code" type="text"/>
+      </div>
+     </div>
+
      <!-- Medical Information Section -->
      <div class="form-section">
       <h3 class="section-title">Medical Information</h3>

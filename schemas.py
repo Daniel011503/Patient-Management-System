@@ -17,6 +17,12 @@ class PatientBase(BaseModel):
     referal: Optional[str] = None
     psr_date: Optional[date] = None  # Fixed: Changed from datetime to date
     authorization: Optional[str] = None
+    # New authorization fields
+    auth_number: Optional[str] = None
+    auth_units: Optional[int] = None
+    auth_start_date: Optional[date] = None
+    auth_end_date: Optional[date] = None
+    auth_diagnosis_code: Optional[str] = None
     diagnosis: Optional[str] = None
     start_date: Optional[date] = None  # Fixed: Changed from datetime to date
     end_date: Optional[date] = None  # Fixed: Changed from datetime to date
