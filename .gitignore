@@ -91,6 +91,17 @@ Thumbs.db
 .env.test.local
 .env.production.local
 
+# AWS and deployment credentials (NEVER COMMIT THESE!)
+aws-db-credentials.txt
+.aws/
+*.pem
+*.key
+
+# Elastic Beanstalk Files (generated during deployment)
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+
 # Coverage reports (if you add testing)
 htmlcov/
 .coverage

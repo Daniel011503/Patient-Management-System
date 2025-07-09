@@ -1,0 +1,36 @@
+# Docker Compose for Spectrum Mental Health - Development & Testing
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=sqlite:///./people.db
+      - SECRET_KEY=your-secret-key-change-in-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    volumes:
+      - ./uploads:/app/uploads
+      - ./people.db:/app/people.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # For production, you might want to add a PostgreSQL service:
+  # db:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: spectrum_db
+  #     POSTGRES_USER: spectrum_user
+  #     POSTGRES_PASSWORD: secure_password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+# volumes:
+#   postgres_data:
