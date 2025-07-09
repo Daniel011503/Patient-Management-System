@@ -39,6 +39,12 @@ patients.db
 people.db
 people_backup_*.db
 
+# PostgreSQL backups and exports
+backup_*.sql
+backup_*.db
+export_*/
+*.dump
+
 # Migration and utility scripts (temporary)
 migrate_*.py
 _service_schema_patch.py
@@ -48,6 +54,11 @@ restart_admin.py
 setup.py
 simple_setup.py
 migrations_archive/
+
+# Migration and temporary files
+pre_migration_report.json
+post_migration_report.json
+migration_*.log
 
 # Uploads directory (patient files - sensitive data)
 uploads/
@@ -122,3 +133,9 @@ secrets.txt
 config.ini
 *.pem
 *.key
+
+# Environment files with sensitive data
+.env.development
+.env.local
+.env.staging
+.env.test
