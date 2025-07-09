@@ -36,6 +36,28 @@ ENV/
 *.sqlite
 *.sqlite3
 patients.db
+people.db
+people_backup_*.db
+
+# Migration and utility scripts (temporary)
+migrate_*.py
+_service_schema_patch.py
+fix_database.py
+check_schema.py
+restart_admin.py
+setup.py
+simple_setup.py
+
+# Uploads directory (patient files - sensitive data)
+uploads/
+
+# Audit and compliance reports (may contain PHI)
+hipaa_audit.log
+hipaa_compliance_report_*.json
+hipaa_audit_analyzer.py
+
+# Debug files
+debug.html
 
 # IDE and Editor files
 .vscode/

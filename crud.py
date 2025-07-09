@@ -13,10 +13,56 @@ def get_patients(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Patient).offset(skip).limit(limit).all()
 
 def create_patient(db: Session, patient: schemas.PatientCreate):
-    db_patient = models.Patient(**patient.dict())
+    # Log all the patient data being received
+    patient_data = patient.dict()
+    print(f"🔍 Creating patient with data: {patient_data}")
+    
+    # Check specifically for authorization fields
+    auth_fields = {
+        'auth_number': patient_data.get('auth_number'),
+        'auth_units': patient_data.get('auth_units'), 
+        'auth_start_date': patient_data.get('auth_start_date'),
+        'auth_end_date': patient_data.get('auth_end_date'),
+        'auth_diagnosis_code': patient_data.get('auth_diagnosis_code')
+    }
+    print(f"🔍 Authorization fields: {auth_fields}")
+    
+    db_patient = models.Patient(**patient_data)
+    print(f"🔍 Patient object created with auth_number: {db_patient.auth_number}")
+    
     db.add(db_patient)
     db.commit()
     db.refresh(db_patient)
+    
+    print(f"✅ Patient saved to database with auth_number: {db_patient.auth_number}")
+    
+    # If authorization data was provided, create an authorization record
+    has_auth_data = any([
+        auth_fields.get('auth_number'),
+        auth_fields.get('auth_units'),
+        auth_fields.get('auth_start_date'),
+        auth_fields.get('auth_end_date'),
+        auth_fields.get('auth_diagnosis_code')
+    ])
+    
+    if has_auth_data:
+        print(f"🔍 Creating authorization record for patient {db_patient.id}")
+        try:
+            # Create authorization using the same data
+            auth_data = schemas.AuthorizationCreate(
+                auth_number=auth_fields.get('auth_number'),
+                auth_units=auth_fields.get('auth_units'),
+                auth_start_date=auth_fields.get('auth_start_date'),
+                auth_end_date=auth_fields.get('auth_end_date'),
+                auth_diagnosis_code=auth_fields.get('auth_diagnosis_code')
+            )
+            
+            db_authorization = create_authorization(db, patient_id=db_patient.id, authorization=auth_data)
+            print(f"✅ Authorization record created with ID: {db_authorization.id}")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not create authorization record: {str(e)}")
+            # Don't fail patient creation if authorization creation fails
+    
     return db_patient
 
 def update_patient(db: Session, patient_id: int, patient: schemas.PatientUpdate):

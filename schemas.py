@@ -134,6 +134,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+    jti: Optional[str] = None  # JWT ID for token tracking
 
 class LoginRequest(BaseModel):
     username: str

@@ -90,6 +90,26 @@ async def log_requests(request: Request, call_next):
     logger.info(f"📤 Response: {response.status_code}")
     return response
 
+# HIPAA Compliance: Add security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    
+    # HIPAA-compliant security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    
+    # Remove server information for security
+    if "server" in response.headers:
+        del response.headers["server"]
+    
+    return response
+
 # Create default admin user on startup
 @app.on_event("startup")
 async def startup_event():
@@ -346,6 +366,10 @@ def create_patient(
 ):
     logger.info(f"Creating patient {patient.patient_number} by user: {current_user.username}")
     
+    # HIPAA Audit: Log patient creation attempt
+    from auth import log_phi_access
+    log_phi_access(current_user, 0, "CREATE_PATIENT", f"Creating new patient: {patient.patient_number}")
+    
     # Check if patient number already exists
     existing_patient = db.query(models.Patient).filter(
         models.Patient.patient_number == patient.patient_number
@@ -354,8 +378,23 @@ def create_patient(
         raise HTTPException(status_code=400, detail="Patient number already exists")
     
     try:
+        # Log the authorization data being received
+        auth_data = {
+            "auth_number": patient.auth_number,
+            "auth_units": patient.auth_units,
+            "auth_start_date": patient.auth_start_date,
+            "auth_end_date": patient.auth_end_date,
+            "auth_diagnosis_code": patient.auth_diagnosis_code
+        }
+        logger.info(f"Authorization data received: {auth_data}")
+        
         result = crud.create_patient(db=db, patient=patient)
+        
+        # HIPAA Audit: Log successful patient creation
+        log_phi_access(current_user, result.id, "PATIENT_CREATED", f"Patient created successfully: {result.patient_number}")
+        
         logger.info(f"✅ Patient created successfully with ID: {result.id}")
+        logger.info(f"✅ Authorization fields saved: auth_number={result.auth_number}, auth_units={result.auth_units}")
         return result
     except Exception as e:
         logger.error(f"❌ Error creating patient: {str(e)}")

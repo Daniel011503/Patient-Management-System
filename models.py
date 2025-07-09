@@ -10,15 +10,15 @@ class Patient(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     patient_number = Column(String, unique=True, index=True, nullable=False)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    address = Column(Text)
-    date_of_birth = Column(Date)
-    phone = Column(String)
-    ssn = Column(String)
-    medicaid_id = Column(String)
+    first_name = Column(String, nullable=False)  # Should be encrypted in production
+    last_name = Column(String, nullable=False)   # Should be encrypted in production
+    address = Column(Text)                       # Should be encrypted in production
+    date_of_birth = Column(Date)                 # Should be encrypted in production
+    phone = Column(String)                       # Should be encrypted in production
+    ssn = Column(String)                         # Should be encrypted in production
+    medicaid_id = Column(String)                 # Should be encrypted in production
     insurance = Column(String)
-    insurance_id = Column(String)
+    insurance_id = Column(String)                # Should be encrypted in production
     referal = Column(String)
     psr_date = Column(Date)
     authorization = Column(String)
@@ -27,16 +27,22 @@ class Patient(Base):
     auth_start_date = Column(Date)
     auth_end_date = Column(Date)
     auth_diagnosis_code = Column(String)
-    diagnosis = Column(Text)
+    diagnosis = Column(Text)                     # Should be encrypted in production
     start_date = Column(Date)
     end_date = Column(Date)
     code1 = Column(String)
     code2 = Column(String)
     code3 = Column(String)
     code4 = Column(String)
-    notes = Column(Text)  # Added notes field for patient information
+    notes = Column(Text)  # Added notes field for patient information - Should be encrypted
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # HIPAA Compliance Fields
+    last_accessed_by = Column(String, nullable=True)  # Track who last accessed this record
+    last_accessed_at = Column(DateTime, nullable=True)
+    access_count = Column(Integer, default=0)  # Track access frequency
+    
     services = relationship(
         "Service",
         backref=backref("patient"),
@@ -55,6 +61,15 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
+    
+    # HIPAA Compliance Fields
+    failed_login_attempts = Column(Integer, default=0)
+    lockout_until = Column(DateTime, nullable=True)
+    password_last_changed = Column(DateTime, default=datetime.utcnow)
+    must_change_password = Column(Boolean, default=False)
+    last_activity = Column(DateTime, default=datetime.utcnow)
+    last_login_ip = Column(String, nullable=True)
+    session_timeout_override = Column(Integer, nullable=True)  # Custom timeout in minutes
     
     def __repr__(self):
         return f"<User(username='{self.username}', role='{self.role}')>"

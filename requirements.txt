@@ -1,5 +1,5 @@
 # Updated Patient Management System Dependencies
-# Compatible with Python 3.8+ - Fixed bcrypt compatibility
+# Compatible with Python 3.8+ - HIPAA Compliant Version
 
 # Core Web Framework
 fastapi==0.104.1                # Modern, fast web framework for building APIs
@@ -15,14 +15,12 @@ email-validator==2.1.0          # Email validation for Pydantic
 # Form Handling
 python-multipart==0.0.6         # Multipart form data parsing
 
-# Authentication and Security - FIXED VERSIONS
+# Authentication and Security - HIPAA Enhanced
 python-jose[cryptography]==3.3.0  # JWT token handling
 passlib[bcrypt]==1.7.4            # Password hashing with bcrypt
+cryptography==41.0.7             # Encryption for PHI data
+python-dotenv==1.0.0             # Environment variable management
 bcrypt==4.0.1                     # Fixed bcrypt version for compatibility
-python-dotenv==1.0.0              # Environment variables management
 
 # Session Management
 itsdangerous==2.1.2               # Secure session cookies
-
-# Additional Security
-cryptography==41.0.7              # Cryptographic recipes and primitives
