@@ -47,6 +47,7 @@ check_schema.py
 restart_admin.py
 setup.py
 simple_setup.py
+migrations_archive/
 
 # Uploads directory (patient files - sensitive data)
 uploads/
