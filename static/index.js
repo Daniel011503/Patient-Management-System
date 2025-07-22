@@ -965,7 +965,9 @@
                 } else {
                     modalContent += '<div class="services-list">';
                     servicesForDate.forEach(service => {
-                        const timeDisplay = service.service_time || 'No time specified';
+                        // Always use the formatted time for display in the calendar modal
+                        // Strictly use only the formatted time for display; never fallback to military time
+                        const timeDisplay = service.service_time_formatted ? service.service_time_formatted : 'No time specified';
                         const attendedStatus = service.attended === true ? 'Attended' : 
                                              service.attended === false ? 'No-show' : 'Scheduled';
                         const statusClass = service.attended === true ? 'status-attended' : 
@@ -1038,7 +1040,7 @@
                                     ${s.is_recurring ? '<span title="Series parent" style="margin-left:5px;color:#5555AA;font-weight:bold;">⟳</span>' : ''}
                                     ${s.parent_service_id ? '<span title="Part of recurring series" style="margin-left:5px;color:#5555AA;">⟳</span>' : ''}
                                 </td>
-                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${formatTime12hr(s.service_time) || 'N/A'}</td>
+                                <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.service_time_formatted || 'N/A'}</td>
                                 <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">${s.service_type || ''}</td>
                                 <td style="padding:8px;text-align:left;border-bottom:1px solid #eee;">
                                     <select 

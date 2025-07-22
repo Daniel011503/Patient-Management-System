@@ -1,3 +1,21 @@
+def format_time_12hr(dt):
+    """Format a datetime, time object, or string to 12-hour AM/PM string."""
+    if isinstance(dt, datetime):
+        return dt.strftime("%I:%M %p").lstrip('0')
+    elif hasattr(dt, 'hour') and hasattr(dt, 'minute'):
+        return f"{(dt.hour % 12 or 12)}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
+    elif isinstance(dt, str):
+        # Try to parse string time like '16:30' or '08:05'
+        import re
+        match = re.match(r"^(\d{1,2}):(\d{2})$", dt)
+        if match:
+            hour = int(match.group(1))
+            minute = int(match.group(2))
+            ampm = 'AM' if hour < 12 else 'PM'
+            hour12 = (hour % 12) or 12
+            return f"{hour12}:{minute:02d} {ampm}"
+        return dt  # fallback: return as-is
+    return str(dt)
 from fastapi import FastAPI, HTTPException, Depends, status, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
@@ -211,6 +229,8 @@ async def logout(request: Request, current_user: models.User = Depends(get_curre
     return {"message": "Logged out successfully", "redirect_url": "/static/login.html"}
 
 # USER MANAGEMENT ROUTES (SIMPLIFIED - NO ROLE RESTRICTIONS)
+
+# Create or edit user endpoint
 @app.post("/users/", response_model=schemas.User)
 async def create_new_user(
     user_data: schemas.UserCreate,
@@ -218,12 +238,71 @@ async def create_new_user(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """Create a new user"""
+    # Allow system admin to create any user, including other admins
     try:
+        # Check if username already exists
+        existing_user = db.query(models.User).filter(models.User.username == user_data.username).first()
+        if existing_user:
+            logger.error(f"Attempt to create user with existing username: {user_data.username}")
+            raise HTTPException(status_code=400, detail="Username already exists")
+        # Only system admin can create users with role 'admin'
+        if user_data.role == "admin" and current_user.role != "admin":
+            logger.error(f"Non-admin user {current_user.username} tried to create admin user")
+            raise HTTPException(status_code=403, detail="Only system admin can create admin users")
+        # Password validation
+        import re
+        password = user_data.password
+        logger.info(f"Validating password for new user: {password}")
+        if not password or len(password) < 12:
+            logger.error("Password too short")
+            raise HTTPException(status_code=400, detail="Password must be at least 12 characters")
+        if not re.search(r"[A-Z]", password):
+            logger.error("Password missing uppercase letter")
+            raise HTTPException(status_code=400, detail="Password must contain an uppercase letter")
+        if not re.search(r"[a-z]", password):
+            logger.error("Password missing lowercase letter")
+            raise HTTPException(status_code=400, detail="Password must contain a lowercase letter")
+        if not re.search(r"[0-9]", password):
+            logger.error("Password missing number")
+            raise HTTPException(status_code=400, detail="Password must contain a number")
+        if not re.search(r"[^A-Za-z0-9]", password):
+            logger.error("Password missing special character")
+            raise HTTPException(status_code=400, detail="Password must contain a special character")
         user = auth.create_user(db, user_data)
         logger.info(f"New user created: {user.username} by {current_user.username}")
         return schemas.User.model_validate(user)
     except auth.AuthError as e:
+        logger.error(f"AuthError creating user: {e.message}")
         raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.error(f"Error creating user: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error creating user: {str(e)}")
+
+# Edit user endpoint
+@app.put("/users/{user_id}", response_model=schemas.User)
+async def edit_user(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Edit an existing user"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        logger.error(f"Edit user failed: User {user_id} not found")
+        raise HTTPException(status_code=404, detail="User not found")
+    # Only non-admins are restricted from editing admin users
+    if user.role == "admin" and current_user.role != "admin":
+        logger.error(f"Non-admin user {current_user.username} tried to edit admin user {user.username}")
+        raise HTTPException(status_code=403, detail="Only system admin can edit admin users")
+    # System admin can edit other admins
+    update_data = user_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user, field, value)
+    db.commit()
+    db.refresh(user)
+    logger.info(f"User {user.username} updated by {current_user.username}")
+    return schemas.User.model_validate(user)
 
 @app.get("/users/", response_model=list[schemas.User])
 async def list_users(
@@ -578,8 +657,25 @@ def get_patient_services(
         
         # Get the services ordered by date
         services = query.order_by(models.Service.service_date.desc()).all()
-        
-        return [schemas.Service.model_validate(s) for s in services]
+        formatted_services = []
+        for s in services:
+            service_dict = s.__dict__.copy() if hasattr(s, '__dict__') else dict(s)
+            # Always set service_time_formatted using service_time if present, else service_date
+            time_val = None
+            if 'service_time' in service_dict and service_dict.get('service_time'):
+                time_val = service_dict['service_time']
+            elif 'service_date' in service_dict and service_dict['service_date']:
+                # If service_date is a datetime, extract time portion
+                dt_val = service_dict['service_date']
+                if isinstance(dt_val, datetime):
+                    time_val = f"{dt_val.hour:02d}:{dt_val.minute:02d}"
+                else:
+                    time_val = dt_val
+            service_dict['service_time_formatted'] = format_time_12hr(time_val) if time_val else 'No time specified'
+            # Overwrite any existing time fields with formatted value for frontend
+            service_dict['service_time'] = service_dict['service_time_formatted']
+            formatted_services.append(schemas.Service.model_validate(service_dict))
+        return formatted_services
     except Exception as e:
         logger.error(f"Error fetching patient services: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching services: {str(e)}")
@@ -622,7 +718,23 @@ def get_attendance_sheet(
     """Get attendance sheet data with optional filters"""
     try:
         services = crud.get_attendance_services(db, patient_id=patient_id, service_type=service_type, week_start=week_start)
-        return [schemas.Service.model_validate(s) for s in services]
+        formatted_services = []
+        for s in services:
+            service_dict = s.__dict__.copy() if hasattr(s, '__dict__') else dict(s)
+            time_val = None
+            if 'service_time' in service_dict and service_dict.get('service_time'):
+                time_val = service_dict['service_time']
+            elif 'service_date' in service_dict and service_dict['service_date']:
+                dt_val = service_dict['service_date']
+                if isinstance(dt_val, datetime):
+                    time_val = f"{dt_val.hour:02d}:{dt_val.minute:02d}"
+                else:
+                    time_val = dt_val
+            service_dict['service_time_formatted'] = format_time_12hr(time_val) if time_val else 'No time specified'
+            # Overwrite any existing time fields with formatted value for frontend
+            service_dict['service_time'] = service_dict['service_time_formatted']
+            formatted_services.append(schemas.Service.model_validate(service_dict))
+        return formatted_services
     except Exception as e:
         logger.error(f"Error fetching attendance data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching attendance data: {str(e)}")
@@ -637,7 +749,23 @@ def get_appointment_sheet(
     """Get appointment sheet data with optional filters"""
     try:
         services = crud.get_appointment_services(db, patient_id=patient_id, service_type=service_type)
-        return [schemas.Service.model_validate(s) for s in services]
+        formatted_services = []
+        for s in services:
+            service_dict = s.__dict__.copy() if hasattr(s, '__dict__') else dict(s)
+            time_val = None
+            if 'service_time' in service_dict and service_dict.get('service_time'):
+                time_val = service_dict['service_time']
+            elif 'service_date' in service_dict and service_dict['service_date']:
+                dt_val = service_dict['service_date']
+                if isinstance(dt_val, datetime):
+                    time_val = f"{dt_val.hour:02d}:{dt_val.minute:02d}"
+                else:
+                    time_val = dt_val
+            service_dict['service_time_formatted'] = format_time_12hr(time_val) if time_val else 'No time specified'
+            # Overwrite any existing time fields with formatted value for frontend
+            service_dict['service_time'] = service_dict['service_time_formatted']
+            formatted_services.append(schemas.Service.model_validate(service_dict))
+        return formatted_services
     except Exception as e:
         logger.error(f"Error fetching appointment data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching appointment data: {str(e)}")
