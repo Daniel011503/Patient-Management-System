@@ -155,6 +155,7 @@ class Service(BaseModel):
     service_type: str
     service_date: date
     service_time: str  # Added service_time field
+    service_time_formatted: Optional[str] = None  # Added for frontend display
     sheet_type: str
     service_category: str  # "attendance" or "appointment"
     week_start_date: Optional[date] = None  # For attendance tracking

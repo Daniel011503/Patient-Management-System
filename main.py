@@ -1,21 +1,34 @@
 def format_time_12hr(dt):
     """Format a datetime, time object, or string to 12-hour AM/PM string."""
+    if dt is None or dt == '':
+        return 'No time specified'
+    
     if isinstance(dt, datetime):
         return dt.strftime("%I:%M %p").lstrip('0')
     elif hasattr(dt, 'hour') and hasattr(dt, 'minute'):
         return f"{(dt.hour % 12 or 12)}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
     elif isinstance(dt, str):
+        # Handle empty or whitespace strings
+        if not dt.strip():
+            return 'No time specified'
+        
         # Try to parse string time like '16:30' or '08:05'
         import re
-        match = re.match(r"^(\d{1,2}):(\d{2})$", dt)
+        match = re.match(r"^(\d{1,2}):(\d{2})$", dt.strip())
         if match:
             hour = int(match.group(1))
             minute = int(match.group(2))
             ampm = 'AM' if hour < 12 else 'PM'
             hour12 = (hour % 12) or 12
             return f"{hour12}:{minute:02d} {ampm}"
-        return dt  # fallback: return as-is
-    return str(dt)
+        
+        # If it's already formatted (contains AM/PM), return as-is
+        if 'AM' in dt.upper() or 'PM' in dt.upper():
+            return dt
+            
+        return 'No time specified'  # fallback for unrecognized format
+    
+    return 'No time specified'
 from fastapi import FastAPI, HTTPException, Depends, status, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
@@ -660,20 +673,45 @@ def get_patient_services(
         formatted_services = []
         for s in services:
             service_dict = s.__dict__.copy() if hasattr(s, '__dict__') else dict(s)
-            # Always set service_time_formatted using service_time if present, else service_date
+            
+            # Extract time value with better logic
             time_val = None
-            if 'service_time' in service_dict and service_dict.get('service_time'):
-                time_val = service_dict['service_time']
-            elif 'service_date' in service_dict and service_dict['service_date']:
-                # If service_date is a datetime, extract time portion
-                dt_val = service_dict['service_date']
-                if isinstance(dt_val, datetime):
-                    time_val = f"{dt_val.hour:02d}:{dt_val.minute:02d}"
+            
+            # Debug: Log raw database values for patient services
+            logger.info(f"🔍 Patient Service {s.id} RAW DATA:")
+            logger.info(f"  - service_time: {getattr(s, 'service_time', 'NOT SET')} (type: {type(getattr(s, 'service_time', None))})")
+            logger.info(f"  - service_date: {getattr(s, 'service_date', 'NOT SET')} (type: {type(getattr(s, 'service_date', None))})")
+            
+            # First, try to get service_time directly
+            if hasattr(s, 'service_time') and s.service_time:
+                time_val = s.service_time
+                logger.info(f"  - Using service_time: {time_val}")
+            # If no service_time, try to extract from service_date if it's a datetime
+            elif hasattr(s, 'service_date') and s.service_date:
+                if isinstance(s.service_date, datetime):
+                    # Extract time portion from datetime
+                    time_val = f"{s.service_date.hour:02d}:{s.service_date.minute:02d}"
+                    logger.info(f"  - Extracted from service_date datetime: {time_val}")
+                elif hasattr(s.service_date, 'time'):
+                    # If service_date has a time component
+                    time_obj = s.service_date.time()
+                    time_val = f"{time_obj.hour:02d}:{time_obj.minute:02d}"
+                    logger.info(f"  - Extracted from service_date time: {time_val}")
                 else:
-                    time_val = dt_val
-            service_dict['service_time_formatted'] = format_time_12hr(time_val) if time_val else 'No time specified'
-            # Overwrite any existing time fields with formatted value for frontend
-            service_dict['service_time'] = service_dict['service_time_formatted']
+                    logger.info(f"  - service_date is not datetime: {type(s.service_date)}")
+            else:
+                logger.info(f"  - No time data found")
+            
+            # Format the time
+            formatted_time = format_time_12hr(time_val)
+            service_dict['service_time_formatted'] = formatted_time
+            
+            # Always provide both fields for frontend compatibility
+            service_dict['service_time'] = formatted_time
+            
+            # Debug logging to see what we're sending to frontend
+            logger.info(f"🔍 Patient Service {s.id}: raw_time='{time_val}', formatted='{formatted_time}'")
+            
             formatted_services.append(schemas.Service.model_validate(service_dict))
         return formatted_services
     except Exception as e:
@@ -721,18 +759,30 @@ def get_attendance_sheet(
         formatted_services = []
         for s in services:
             service_dict = s.__dict__.copy() if hasattr(s, '__dict__') else dict(s)
+            
+            # Extract time value with better logic
             time_val = None
-            if 'service_time' in service_dict and service_dict.get('service_time'):
-                time_val = service_dict['service_time']
-            elif 'service_date' in service_dict and service_dict['service_date']:
-                dt_val = service_dict['service_date']
-                if isinstance(dt_val, datetime):
-                    time_val = f"{dt_val.hour:02d}:{dt_val.minute:02d}"
-                else:
-                    time_val = dt_val
-            service_dict['service_time_formatted'] = format_time_12hr(time_val) if time_val else 'No time specified'
-            # Overwrite any existing time fields with formatted value for frontend
-            service_dict['service_time'] = service_dict['service_time_formatted']
+            
+            # First, try to get service_time directly
+            if hasattr(s, 'service_time') and s.service_time:
+                time_val = s.service_time
+            # If no service_time, try to extract from service_date if it's a datetime
+            elif hasattr(s, 'service_date') and s.service_date:
+                if isinstance(s.service_date, datetime):
+                    # Extract time portion from datetime
+                    time_val = f"{s.service_date.hour:02d}:{s.service_date.minute:02d}"
+                elif hasattr(s.service_date, 'time'):
+                    # If service_date has a time component
+                    time_obj = s.service_date.time()
+                    time_val = f"{time_obj.hour:02d}:{time_obj.minute:02d}"
+            
+            # Format the time
+            formatted_time = format_time_12hr(time_val)
+            service_dict['service_time_formatted'] = formatted_time
+            
+            # Always provide both fields for frontend compatibility
+            service_dict['service_time'] = formatted_time
+            
             formatted_services.append(schemas.Service.model_validate(service_dict))
         return formatted_services
     except Exception as e:
@@ -752,18 +802,45 @@ def get_appointment_sheet(
         formatted_services = []
         for s in services:
             service_dict = s.__dict__.copy() if hasattr(s, '__dict__') else dict(s)
+            
+            # Extract time value with better logic
             time_val = None
-            if 'service_time' in service_dict and service_dict.get('service_time'):
-                time_val = service_dict['service_time']
-            elif 'service_date' in service_dict and service_dict['service_date']:
-                dt_val = service_dict['service_date']
-                if isinstance(dt_val, datetime):
-                    time_val = f"{dt_val.hour:02d}:{dt_val.minute:02d}"
+            
+            # Debug: Log raw database values for appointments
+            logger.info(f"🔍 Appointment Service {s.id} RAW DATA:")
+            logger.info(f"  - service_time: {getattr(s, 'service_time', 'NOT SET')} (type: {type(getattr(s, 'service_time', None))})")
+            logger.info(f"  - service_date: {getattr(s, 'service_date', 'NOT SET')} (type: {type(getattr(s, 'service_date', None))})")
+            
+            # First, try to get service_time directly
+            if hasattr(s, 'service_time') and s.service_time:
+                time_val = s.service_time
+                logger.info(f"  - Using service_time: {time_val}")
+            # If no service_time, try to extract from service_date if it's a datetime
+            elif hasattr(s, 'service_date') and s.service_date:
+                if isinstance(s.service_date, datetime):
+                    # Extract time portion from datetime
+                    time_val = f"{s.service_date.hour:02d}:{s.service_date.minute:02d}"
+                    logger.info(f"  - Extracted from service_date datetime: {time_val}")
+                elif hasattr(s.service_date, 'time'):
+                    # If service_date has a time component
+                    time_obj = s.service_date.time()
+                    time_val = f"{time_obj.hour:02d}:{time_obj.minute:02d}"
+                    logger.info(f"  - Extracted from service_date time: {time_val}")
                 else:
-                    time_val = dt_val
-            service_dict['service_time_formatted'] = format_time_12hr(time_val) if time_val else 'No time specified'
-            # Overwrite any existing time fields with formatted value for frontend
-            service_dict['service_time'] = service_dict['service_time_formatted']
+                    logger.info(f"  - service_date is not datetime: {type(s.service_date)}")
+            else:
+                logger.info(f"  - No time data found")
+            
+            # Format the time
+            formatted_time = format_time_12hr(time_val)
+            service_dict['service_time_formatted'] = formatted_time
+            
+            # Always provide both fields for frontend compatibility
+            service_dict['service_time'] = formatted_time
+            
+            # Debug logging to see what we're sending to frontend
+            logger.info(f"🔍 Appointment Service {s.id}: raw_time='{time_val}', formatted='{formatted_time}'")
+            
             formatted_services.append(schemas.Service.model_validate(service_dict))
         return formatted_services
     except Exception as e:

@@ -965,6 +965,11 @@
                 } else {
                     modalContent += '<div class="services-list">';
                     servicesForDate.forEach(service => {
+                        // Debug: Log the service data to console
+                        console.log('📅 Calendar service data:', service);
+                        console.log('🕒 service_time_formatted:', service.service_time_formatted);
+                        console.log('🕒 service_time:', service.service_time);
+                        
                         // Always use the formatted time for display in the calendar modal
                         // Strictly use only the formatted time for display; never fallback to military time
                         const timeDisplay = service.service_time_formatted ? service.service_time_formatted : 'No time specified';
