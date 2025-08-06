@@ -717,12 +717,7 @@ spectrum-mental-health/
 │   ├── database.py            # Database connection and configuration
 │   └── auth.py                # Authentication and security utilities
 │
-├── 🗄️ Database Migration & Management
-│   ├── database_postgres.py   # PostgreSQL database configuration
-│   ├── migrate_sqlite_to_postgres.py  # Migration script
-│   ├── setup_postgresql.py    # PostgreSQL setup utility
-│   ├── db_manager.py          # Database management tools
-│   ├── test_migration_readiness.py    # Pre-migration testing
+├── 🗄️ Database & Environment Management
 │   ├── alembic.ini            # Alembic configuration
 │   └── alembic/               # Database migration environment
 │       ├── env.py
@@ -738,34 +733,30 @@ spectrum-mental-health/
 │       ├── login.js           # Login functionality
 │       └── login.css          # Login page styles
 │
-├── ☁️ AWS Deployment Configuration
+├── ☁️ Deployment Configuration
 │   ├── Dockerfile             # Container configuration
 │   ├── docker-compose.yml     # Local development with PostgreSQL
-│   ├── .ebextensions/         # Elastic Beanstalk configuration
-│   │   └── python.config      # Python application settings
-│   ├── deploy-aws.sh          # Deployment automation script
-│   ├── setup-aws-infrastructure.sh  # AWS infrastructure setup
-│   └── production-config.py   # Production configuration utilities
+│   └── .ebextensions/         # Elastic Beanstalk configuration
+│       └── python.config      # Python application settings
 │
-├── 📋 Configuration & Environment
-│   ├── requirements.txt       # Python dependencies (SQLite version)
-│   ├── requirements_postgres.txt  # PostgreSQL dependencies
-│   ├── .env.development       # Development environment variables
-│   ├── .env.production        # Production environment variables
+├── 📋 Configuration & Dependencies
+│   ├── requirements.txt       # Python dependencies
 │   ├── .env.hipaa.example     # HIPAA compliance configuration template
 │   └── .gitignore            # Git ignore rules
 │
 ├── 📚 Documentation
-│   ├── README.MD              # This file - comprehensive project documentation
-│   ├── POSTGRESQL-MIGRATION.md    # PostgreSQL migration guide
-│   ├── MIGRATION-STEPS.md     # Step-by-step migration instructions
-│   ├── AWS-DEPLOYMENT.md      # AWS deployment documentation
-│   ├── HIPAA_COMPLIANCE.md    # HIPAA compliance documentation
-│   └── HIPAA_IMPLEMENTATION_SUMMARY.md  # Implementation summary
+│   └── README.MD              # This file - comprehensive project documentation
 │
-└── 📊 Data & Uploads
-    ├── people.db              # SQLite database (development)
-    └── uploads/               # File upload storage (excluded from git)
+├── 📊 Data & Uploads
+│   └── uploads/               # File upload storage (excluded from git)
+│
+└── 🗂️ Local Files (Git Ignored)
+    └── local_files/           # Development files, logs, backups
+        ├── database_backups/  # Database backup files (*.db)
+        ├── migration_scripts/ # Migration and utility scripts
+        ├── logs/             # Application and audit logs
+        ├── aws_files/        # AWS deployment files and documentation
+        └── config_files/     # Environment files and configuration
 ```
 
 ### Key File Descriptions

@@ -95,9 +95,11 @@ Thumbs.db
 *.temp
 .cache/
 
-# Environment variables (if you add them later)
+# Environment variables (NEVER COMMIT THESE - CONTAIN CREDENTIALS!)
 .env
 .env.local
+.env.development
+.env.production
 .env.development.local
 .env.test.local
 .env.production.local
@@ -134,8 +136,11 @@ config.ini
 *.pem
 *.key
 
-# Environment files with sensitive data
-.env.development
-.env.local
-.env.staging
-.env.test
+# Local files directory (database backups, migrations, logs, etc.)
+local_files/
+
+# Environment files with sensitive data (already covered above)
+# .env.development (moved to main ignore section)
+# .env.local (moved to main ignore section) 
+# .env.staging (if you create one)
+# .env.test (if you create one)
