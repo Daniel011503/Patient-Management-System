@@ -854,9 +854,17 @@ def update_service_entry(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
+    logger.info(f"🔄 Updating service {service_id} by user: {current_user.username}")
+    logger.info(f"🔄 Update data: {service_update}")
+    
     db_service = crud.update_service_entry(db, service_id=service_id, service_update=service_update)
     if db_service is None:
+        logger.error(f"❌ Service {service_id} not found")
         raise HTTPException(status_code=404, detail="Service entry not found")
+    
+    logger.info(f"✅ Service {service_id} updated successfully")
+    logger.info(f"✅ New attended status: {getattr(db_service, 'attended', 'NOT SET')}")
+    
     return {"success": True, "service": schemas.Service.model_validate(db_service)}
 
 @app.post("/patients/{patient_id}/recurring-services")

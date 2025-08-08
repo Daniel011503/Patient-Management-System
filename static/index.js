@@ -256,6 +256,102 @@
             }
         }
 
+        // SSN FORMATTING FUNCTIONALITY
+        function formatSSN(value) {
+            // Remove all non-digit characters
+            const digits = value.replace(/\D/g, '');
+            
+            // Limit to 9 digits maximum
+            const limitedDigits = digits.substring(0, 9);
+            
+            // Apply SSN formatting
+            let formatted = '';
+            if (limitedDigits.length > 0) {
+                // First 3 digits
+                formatted += limitedDigits.substring(0, 3);
+                if (limitedDigits.length > 3) {
+                    // Add dash after first 3 digits
+                    formatted += '-' + limitedDigits.substring(3, 5);
+                    if (limitedDigits.length > 5) {
+                        // Add dash after next 2 digits
+                        formatted += '-' + limitedDigits.substring(5, 9);
+                    }
+                }
+            }
+            
+            return formatted;
+        }
+
+        function setupSSNFormatting(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            
+            input.addEventListener('input', function(e) {
+                const cursorPosition = e.target.selectionStart;
+                const originalValue = e.target.value;
+                const formattedValue = formatSSN(originalValue);
+                
+                // Update the input value
+                e.target.value = formattedValue;
+                
+                // Calculate new cursor position accounting for added dashes
+                let newCursorPosition = cursorPosition;
+                if (formattedValue.length > originalValue.length) {
+                    // Dash was added
+                    newCursorPosition = cursorPosition + (formattedValue.length - originalValue.length);
+                } else if (formattedValue.length < originalValue.length) {
+                    // Characters were removed, adjust cursor position
+                    newCursorPosition = Math.min(cursorPosition, formattedValue.length);
+                }
+                
+                // Set the cursor position
+                setTimeout(() => {
+                    e.target.setSelectionRange(newCursorPosition, newCursorPosition);
+                }, 0);
+            });
+
+            // Handle paste events
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                const formattedValue = formatSSN(pastedText);
+                e.target.value = formattedValue;
+                e.target.dispatchEvent(new Event('input'));
+            });
+
+            // Handle keydown to prevent non-numeric input (except backspace, delete, tab, etc.)
+            input.addEventListener('keydown', function(e) {
+                // Allow: backspace, delete, tab, escape, enter, home, end, left, right, up, down
+                const allowedKeys = [8, 9, 27, 13, 46, 35, 36, 37, 38, 39, 40];
+                
+                if (allowedKeys.includes(e.keyCode) ||
+                    // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z
+                    (e.ctrlKey && [65, 67, 86, 88, 90].includes(e.keyCode))) {
+                    return; // Allow these keys
+                }
+                
+                // Prevent if not a number key (0-9)
+                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                    e.preventDefault();
+                }
+                
+                // Don't allow more input if we already have 11 characters (XXX-XX-XXXX)
+                const currentValue = e.target.value.replace(/\D/g, ''); // Get digits only
+                if (currentValue.length >= 9 && !allowedKeys.includes(e.keyCode)) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        // Initialize SSN formatting when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup SSN formatting for add patient form
+            setupSSNFormatting('ssn');
+            
+            // Setup SSN formatting for edit patient form  
+            setupSSNFormatting('editSsn');
+        });
+
         // USER MANAGEMENT FUNCTIONS
 
         // Load Users
@@ -982,9 +1078,15 @@
                             <div class="service-entry">
                                 <div class="service-time">${timeDisplay}</div>
                                 <div class="service-details">
-                                    <strong>${service.patient_name} (${service.patient_number})</strong><br>
-                                    <span class="service-type">${service.service_type}</span><br>
-                                    <span class="service-status ${statusClass}">${attendedStatus}</span>
+                                    <div class="patient-info-row">
+                                        <strong>${service.patient_name} (${service.patient_number})</strong>
+                                        <select class="attendance-select" data-service-id="${service.id}" onchange="updateAttendanceFromCalendar(${service.id}, this.value)">
+                                            <option value="null" ${service.attended === null ? 'selected' : ''}>Scheduled</option>
+                                            <option value="true" ${service.attended === true ? 'selected' : ''}>Attended</option>
+                                            <option value="false" ${service.attended === false ? 'selected' : ''}>No Show</option>
+                                        </select>
+                                    </div>
+                                    <span class="service-type">${service.service_type}</span>
                                 </div>
                             </div>
                         `;
@@ -2577,3 +2679,104 @@
         window.showAddAuthorizationModal = showAddAuthorizationModal;
         window.editAuthorization = editAuthorization;
         window.deleteAuthorization = deleteAuthorization;
+
+        // Update attendance status for an appointment from the calendar modal
+        async function updateAttendanceFromCalendar(serviceId, attended) {
+            try {
+                // Convert string to proper boolean or null
+                let attendedValue;
+                if (attended === 'true') {
+                    attendedValue = true;
+                } else if (attended === 'false') {
+                    attendedValue = false;
+                } else {
+                    attendedValue = null;
+                }
+                
+                const response = await authenticatedFetch(`${API_BASE}/services/${serviceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        attended: attendedValue
+                    })
+                });
+
+                if (response.ok) {
+                    const updatedService = await response.json();
+                    console.log('✅ Attendance updated from calendar:', updatedService);
+                    
+                    // Show success message
+                    const statusText = attendedValue === true ? 'Attended' : 
+                                     attendedValue === false ? 'No Show' : 'Scheduled';
+                    showAlert(`Attendance updated to: ${statusText}`, 'success');
+                    
+                    // Update the calendar display to reflect the change
+                    updateCalendarDisplay();
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('❌ Failed to update attendance:', response.status, errorData);
+                    showAlert('Failed to update attendance status', 'danger');
+                }
+            } catch (error) {
+                console.error('❌ Error updating attendance from calendar:', error);
+                showAlert('Error updating attendance status', 'danger');
+            }
+        }
+
+        // Make the calendar attendance function available globally
+        window.updateAttendanceFromCalendar = updateAttendanceFromCalendar;
+
+        // Attendance update function
+        async function updateAttendance(serviceId, attendedValue) {
+            console.log(`Updating attendance for service ${serviceId} to: ${attendedValue}`);
+            
+            try {
+                // Convert string values to proper boolean/null
+                let attendedStatus;
+                if (attendedValue === 'true') {
+                    attendedStatus = true;
+                } else if (attendedValue === 'false') {
+                    attendedStatus = false;
+                } else {
+                    attendedStatus = null; // For 'scheduled'
+                }
+                
+                const response = await fetch(`${API_BASE}/services/${serviceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({
+                        attended: attendedStatus
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('Attendance updated successfully:', result);
+                
+                // Show success message
+                showAlert('mainAlert', 'Attendance status updated successfully!', 'success');
+                
+                // Refresh the current view to show the change
+                if (currentPatient && currentView === 'services') {
+                    loadPatientServices(currentPatient.id);
+                } else {
+                    // Refresh the current sheet view
+                    loadCurrentSheet();
+                }
+                
+            } catch (error) {
+                console.error('Error updating attendance:', error);
+                showAlert('mainAlert', `Error updating attendance: ${error.message}`, 'error');
+            }
+        }
+        
+        // Make updateAttendance function available globally
+        window.updateAttendance = updateAttendance;
